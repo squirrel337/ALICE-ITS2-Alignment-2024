@@ -1,4 +1,0 @@
-   
-
-
-TObjArray fLastLayer;           // Collection of the output neurons; subset of fNetwork
