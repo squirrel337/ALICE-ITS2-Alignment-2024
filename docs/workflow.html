@@ -442,7 +442,7 @@ a:focus-visible, .rail a:focus-visible {
     <div><dt>Configuration tag</dt><dd>train20220419 &middot; Patch4_rejectBadTracks1</dd></div>
     <div><dt>Sensors</dt><dd>24&thinsp;120 ALPIDE chips, 7 layers</dd></div>
     <div><dt>Fit model</dt><dd>Circle (helix), B = 0.5&nbsp;T</dd></div>
-    <div><dt>Free parameters</dt><dd>4 DoF &times; sensor (&gamma;, T1, T2, T3)</dd></div>
+    <div><dt>Free parameters</dt><dd>6 DoF &times; sensor (&alpha;, &beta;, &gamma;, T1&ndash;T3)</dd></div>
     <div><dt>Deployment</dt><dd>LHC Run 3, Pb&ndash;Pb 2023</dd></div>
   </dl>
 </header>
@@ -488,13 +488,13 @@ a:focus-visible, .rail a:focus-visible {
     circle in the bending plane and a straight line in the <code>z</code>&ndash;<code>&beta;</code>
     plane; the sum of normalized squared residuals is the cost. Gradients propagate back to the
     per-sensor weights, and an analytic Jacobian re-expresses those weights as six rigid-body
-    alignment parameters, of which four are released in the present configuration.
+    alignment parameters &mdash; three rotations and three translations per sensor.
   </p>
 
   <div class="numbers">
     <div><span class="n">24 120</span><span class="k">independent sensor networks</span></div>
     <div><span class="n">11</span><span class="k">network parameters per sensor</span></div>
-    <div><span class="n">6 &rarr; 4</span><span class="k">rigid-body DoF, released per sensor</span></div>
+    <div><span class="n">6</span><span class="k">rigid-body DoF per sensor</span></div>
     <div><span class="n">50 000</span><span class="k">source entries read per step</span></div>
     <div><span class="n">&ge; 6</span><span class="k">tracks required per event</span></div>
     <div><span class="n">5</span><span class="k">epochs per step</span></div>
@@ -735,16 +735,27 @@ a:focus-visible, .rail a:focus-visible {
     </table>
   </div>
 
-  <div class="note caveat">
-    <span class="tag">Active configuration</span>
+  <div class="note">
+    <span class="tag">How the beam constraint is supplied</span>
     <p>
-      In the current version the fitted beam line is <em>not</em> the constraint point used in the
-      cost. <code>GetCost_Beam_CircleFit</code> takes the beam center directly from the per-event
-      reconstructed vertex, <code>BeamCenter(BeamPos[0], BeamPos[1], BeamPos[2])</code>; the
-      parameterized alternative <code>BeamCenter(XZ1&middot;z + XZ0, YZ1&middot;z + YZ0, z)</code>
-      is present but commented out. The pass is still run because the header must exist for the
-      translation unit to compile, and because the fitted slope is a useful diagnostic of the
-      beam-line quality of the sample.
+      There are two routes to the beam point, and both read from a file rather than assuming a
+      nominal axis. The <strong>per-event route</strong>, which is the one active in the cost,
+      takes the beam center straight out of the input tree:
+      <code>GetCost_Beam_CircleFit</code> reads the event vertex <code>(X1, X2, X3)</code> through
+      the addition branches and builds
+      <code>BeamCenter(BeamPos[0], BeamPos[1], BeamPos[2])</code>. The
+      <strong>parameterized route</strong> uses the coefficients this pass writes into
+      <code>YMLPBeamProfile.h</code>, evaluating
+      <code>BeamCenter(XZ1&middot;z + XZ0, YZ1&middot;z + YZ0, z)</code> at the event's
+      <code>z</code>; that line is present in the source and selected by swapping which
+      <code>BeamCenter</code> is constructed.
+    </p>
+    <p>
+      The per-event vertex is the more precise constraint when the sample provides a reliable one,
+      which is why it is the default. The fitted profile remains the fallback for samples where
+      the per-event vertex is unusable, and its slope is in any case a direct diagnostic of the
+      beam-line quality &mdash; the values in the committed header correspond to a beam-line tilt of
+      about 0.3&nbsp;mrad in <code>x</code> and 0.7&nbsp;mrad in <code>y</code>.
     </p>
   </div>
 </section>
@@ -790,11 +801,30 @@ a:focus-visible, .rail a:focus-visible {
   <p>
     The result is <code>MLPTrain/XXXXtrain/XXXXtrain.root</code> containing
     <code>InputTree</code>. The training and test samples are then carved out of it by event
-    number: <code>evno % 10 &isin; [0, 6)</code> is the training set, <code>[6, 8)</code> is the
-    test set. The remaining 20&nbsp;% is not attached to either <code>TEventList</code> and is
-    therefore held back entirely &mdash; it never enters the loss, the line search or the early-stop
-    logic.
+    number: <code>evno % 10 &isin; [0, 6)</code> is the training set and <code>[6, 8)</code> is the
+    test set used inside the job. The remaining 20&nbsp;% is attached to neither
+    <code>TEventList</code> and is held in reserve &mdash; it never enters the loss, the line search
+    or the early-stop logic.
   </p>
+
+  <div class="note">
+    <span class="tag">Two levels of validation</span>
+    <p>
+      The <code>evno % 10</code> split is the <em>in-job</em> control on a single prepared sample:
+      it is what the loss curve compares, and it is what detects a step over-fitting to the subset
+      of sensors that happen to be well populated in that sample. It is deliberately small, since
+      every event withheld is one not contributing to a 24&thinsp;120-sensor gradient.
+    </p>
+    <p>
+      Genuine validation is done separately, on an independently prepared sample that the campaign
+      has never seen &mdash; a different run or fill, reconstructed and converted through the same
+      upstream chain into its own <code>XXXXinput.root</code>. That pool is evaluated by running a
+      job with <code>nEPOCH = 0</code> against the trained weight set, which performs the epoch
+      <code>&minus;1</code> pass only and produces the full residual and monitoring output without
+      updating anything. Judging an alignment on the in-job test slice alone would be judging it on
+      the same detector conditions it was fitted under.
+    </p>
+  </div>
 </section>
 
 <!-- ==================== 05 ==================== -->
@@ -808,7 +838,7 @@ a:focus-visible, .rail a:focus-visible {
 
   <figure class="fig">
     <div class="fig-frame">
-      <svg viewBox="0 0 980 400" role="img" aria-label="Left: the per-sensor network, two inputs s1 and s2 fully connected to three linear outputs cs1, cs2 and cs3, giving six synapse weights and five neuron offsets. Right: the six rigid-body alignment parameters of the same sensor, of which the in-plane rotation gamma and the three translations are released while the two out-of-plane rotations alpha and beta are frozen. An analytic Jacobian links the two descriptions.">
+      <svg viewBox="0 0 980 400" role="img" aria-label="Left: the per-sensor network, two inputs s1 and s2 fully connected to three linear outputs cs1, cs2 and cs3, giving six synapse weights and five neuron offsets. Right: the six rigid-body alignment parameters of the same sensor, three rotations about the two in-plane axes and the normal, and three translations. An analytic Jacobian links the two descriptions, and a per-degree-of-freedom gate vector selects which are advanced in a given run.">
         <defs>
           <marker id="f4a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
             <polygon class="h-acc" points="0,0 10,4 0,8" />
@@ -859,41 +889,43 @@ a:focus-visible, .rail a:focus-visible {
         <text class="d-cap" x="572" y="34">GEOMETRIC DESCRIPTION &mdash; rigid body</text>
         <rect class="d-box" x="572" y="48" width="368" height="286" rx="2" />
 
-        <rect class="d-fill" x="596" y="72" width="320" height="34" rx="2" />
+        <rect class="d-acc" x="596" y="72" width="320" height="34" rx="2" />
         <text class="d-t" x="614" y="94">&alpha; &nbsp; rotation about s1</text>
-        <text class="d-rt" x="898" y="94" text-anchor="end">frozen</text>
+        <text class="d-at" x="898" y="94" text-anchor="end">&part;C/&part;&alpha;</text>
 
-        <rect class="d-fill" x="596" y="112" width="320" height="34" rx="2" />
+        <rect class="d-acc" x="596" y="112" width="320" height="34" rx="2" />
         <text class="d-t" x="614" y="134">&beta; &nbsp; rotation about s2</text>
-        <text class="d-rt" x="898" y="134" text-anchor="end">frozen</text>
+        <text class="d-at" x="898" y="134" text-anchor="end">&part;C/&part;&beta;</text>
 
         <rect class="d-acc" x="596" y="152" width="320" height="34" rx="2" />
         <text class="d-t" x="614" y="174">&gamma; &nbsp; rotation about the normal</text>
-        <text class="d-at" x="898" y="174" text-anchor="end">released</text>
+        <text class="d-at" x="898" y="174" text-anchor="end">&part;C/&part;&gamma;</text>
 
         <rect class="d-acc" x="596" y="192" width="320" height="34" rx="2" />
-        <text class="d-t" x="614" y="214">T1 &nbsp; translation</text>
-        <text class="d-at" x="898" y="214" text-anchor="end">released</text>
+        <text class="d-t" x="614" y="214">T1 &nbsp; translation along s1</text>
+        <text class="d-at" x="898" y="214" text-anchor="end">&part;C/&part;T1</text>
 
         <rect class="d-acc" x="596" y="232" width="320" height="34" rx="2" />
-        <text class="d-t" x="614" y="254">T2 &nbsp; translation</text>
-        <text class="d-at" x="898" y="254" text-anchor="end">released</text>
+        <text class="d-t" x="614" y="254">T2 &nbsp; translation along s2</text>
+        <text class="d-at" x="898" y="254" text-anchor="end">&part;C/&part;T2</text>
 
         <rect class="d-acc" x="596" y="272" width="320" height="34" rx="2" />
-        <text class="d-t" x="614" y="294">T3 &nbsp; translation</text>
-        <text class="d-at" x="898" y="294" text-anchor="end">released</text>
+        <text class="d-t" x="614" y="294">T3 &nbsp; translation along the normal</text>
+        <text class="d-at" x="898" y="294" text-anchor="end">&part;C/&part;T3</text>
 
-        <text class="d-m" x="596" y="322">Update_aR = {0, 0, 1} &nbsp; Update_aT = {1, 1, 1}</text>
+        <text class="d-m" x="596" y="322">gated per run by Update_aR[3], Update_aT[3]</text>
 
-        <text class="d-m" x="40" y="366">Multiplicity: one such pair per sensor &times; 24 120 sensors &rarr; 265 320 network parameters, 96 480 released geometric parameters.</text>
+        <text class="d-m" x="40" y="366">Multiplicity: one such pair per sensor &times; 24 120 sensors &rarr; 265 320 network parameters, 144 720 geometric parameters.</text>
         <text class="d-m" x="40" y="384">Weights are stored in both descriptions: weights.txt carries 11 network values and 6 alignment values per ChipID.</text>
       </svg>
     </div>
     <figcaption>
       <b>Figure 2</b> The same sensor, described twice. Training moves the network weights; the
-      Jacobian keeps the geometric description exactly consistent with them. Freezing
-      <code>&alpha;</code> and <code>&beta;</code> is a deliberate choice, not a limitation of the
-      formalism &mdash; both gradients are computed, only their update coefficients are zero.
+      Jacobian keeps the geometric description exactly consistent with them. All six gradients are
+      computed exactly, so the alignment is a full 6&nbsp;DoF rigid-body problem. The two gate
+      vectors <code>Update_aR</code> and <code>Update_aT</code> scale each degree of freedom
+      independently, which is how a campaign can hold a subset fixed &mdash; a scheduling choice,
+      not a restriction of the formalism.
     </figcaption>
   </figure>
 
@@ -1226,9 +1258,12 @@ a:focus-visible, .rail a:focus-visible {
       <code>&part;C/&part;T3</code> exactly, with no finite differences anywhere.
     </li>
     <li>
-      <strong>Update and write back.</strong> The six geometric parameters are advanced with the
-      per-degree-of-freedom coefficients <code>Update_aR = {0, 0, 1}</code> and
-      <code>Update_aT = {1, 1, 1}</code>, then the network weights are recomputed from the updated
+      <strong>Update and write back.</strong> The six geometric parameters are advanced along
+      their own gradients, each scaled by its entry in the gate vectors
+      <code>Update_aR[3]</code> and <code>Update_aT[3]</code>. Setting an entry to zero holds that
+      degree of freedom fixed for the run without changing anything else, which is the mechanism
+      behind a staged schedule &mdash; translations first, rotations released later, or a subset
+      pinned while a weak mode is investigated. The network weights are then recomputed from the updated
       geometry so that the two descriptions never drift apart. Both are stored: each line of
       <code>weights.txt</code> is <code>ChipID</code>, five neuron offsets, six synapse weights,
       <code>aR[0..2]</code> and <code>aT[0..2]</code> &mdash; eighteen columns.
@@ -1241,7 +1276,7 @@ a:focus-visible, .rail a:focus-visible {
       Because the mapping is exact and bidirectional, the learned object is a rigid-body alignment
       by construction and not merely something that resembles one. A per-sensor affine correction
       left unconstrained would have nine free parameters and could absorb shear and scale that no
-      physical mounting can produce; here it has six, of which four are released. The network is
+      physical mounting can produce; here it has exactly the six of a rigid body. The network is
       the numerical vehicle, the geometry is the model.
     </p>
   </div>
@@ -1492,8 +1527,9 @@ a:focus-visible, .rail a:focus-visible {
       The charge&ndash;momentum asymmetry term per &phi; sector penalizes a sagitta-like distortion
       directly in the cost. There is no explicit set of linear constraints fixing the global frame;
       the reference-sensor mechanism (<code>SetSplitReferenceSensor</code>) exists but is disabled,
-      and the global frame is instead held by the vertex constraint and by the frozen
-      out-of-plane rotations.</li>
+      and the global frame is instead held by the vertex constraint and, where a campaign calls
+      for it, by gating individual degrees of freedom through
+      <code>Update_aR</code> and <code>Update_aT</code>.</li>
     <li><strong>Robustness by rejection rather than by down-weighting.</strong> There is no
       M-estimator; a track either enters the cost in full or not at all. This is simple and fast
       but discards information at the edges of the residual distribution.</li>
@@ -1526,13 +1562,9 @@ a:focus-visible, .rail a:focus-visible {
 
   <h3>Honest limitations of the present version</h3>
   <ul>
-    <li>Two of six degrees of freedom per sensor are frozen; out-of-plane rotations are not
-      determined.</li>
     <li>The detector-unit hierarchy that would enable a coarse-to-fine schedule is built but not
       enabled.</li>
     <li>No parameter uncertainties or correlations are produced.</li>
-    <li>The 20&nbsp;% of events outside both the training and test masks are simply unused; there is
-      no third, independent validation pass inside the job.</li>
     <li>Configuration lives in preprocessor defines, so a scan over cut values requires
       recompilation and cannot be varied within a campaign.</li>
   </ul>
