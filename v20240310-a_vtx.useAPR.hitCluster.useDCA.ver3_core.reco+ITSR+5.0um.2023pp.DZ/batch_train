@@ -1,0 +1,2 @@
+gROOT->ProcessLine(".L ./Ymlp/src/YDetectorGeometry.cxx");
+gROOT->ProcessLine(".x run_train_circle.C(901)");

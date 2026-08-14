@@ -1,0 +1,4 @@
+TFile fin("Residual_Monitor_Epoch_At_-1.root","read");
+gROOT->ProcessLine(".L macro.C");
+macro_plot_ResidualProfile();
+
