@@ -1,0 +1,1553 @@
+<title>ITS2 ML Alignment Workflow</title>
+
+<style>
+:root {
+  --ground:      #F1F4F6;
+  --surface:     #FFFFFF;
+  --surface-2:   #E7ECF0;
+  --ink:         #121A21;
+  --ink-2:       #4B5A67;
+  --ink-3:       #77848F;
+  --rule:        #D4DBE2;
+  --rule-strong: #AFBBC6;
+  --accent:      #0D6B77;
+  --accent-soft: #D9EDEF;
+  --signal:      #9C5605;
+  --signal-soft: #F6E8D4;
+  --reject:      #962A39;
+  --reject-soft: #F4DCDF;
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, "Bitstream Charter", Georgia, serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #0E1317;
+    --surface:     #161C21;
+    --surface-2:   #1D252B;
+    --ink:         #E2E8ED;
+    --ink-2:       #A2AFBA;
+    --ink-3:       #7B8894;
+    --rule:        #273038;
+    --rule-strong: #3C4852;
+    --accent:      #4EBDCA;
+    --accent-soft: #10333A;
+    --signal:      #DFA24C;
+    --signal-soft: #33270F;
+    --reject:      #E8808F;
+    --reject-soft: #391B21;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:      #0E1317;
+  --surface:     #161C21;
+  --surface-2:   #1D252B;
+  --ink:         #E2E8ED;
+  --ink-2:       #A2AFBA;
+  --ink-3:       #7B8894;
+  --rule:        #273038;
+  --rule-strong: #3C4852;
+  --accent:      #4EBDCA;
+  --accent-soft: #10333A;
+  --signal:      #DFA24C;
+  --signal-soft: #33270F;
+  --reject:      #E8808F;
+  --reject-soft: #391B21;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0 clamp(1rem, 4vw, 3rem) 6rem;
+}
+
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  padding: clamp(2.5rem, 6vw, 4.5rem) 0 2rem;
+  border-bottom: 2px solid var(--ink);
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 1.1rem;
+}
+.masthead h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.1rem, 5.2vw, 3.3rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  margin: 0 0 1rem;
+  max-width: 18ch;
+}
+.standfirst {
+  font-size: clamp(1.02rem, 1.6vw, 1.18rem);
+  color: var(--ink-2);
+  max-width: 62ch;
+  margin: 0 0 2rem;
+}
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+.meta div { background: var(--ground); padding: 0.7rem 0.85rem; }
+.meta dt {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 0.28rem;
+}
+.meta dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.79rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- layout ---------- */
+
+.shell {
+  display: block;
+  padding-top: 2.5rem;
+}
+@media (min-width: 1080px) {
+  .shell {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 3.5rem;
+    align-items: start;
+  }
+  .rail { position: sticky; top: 1.5rem; }
+}
+
+.rail ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 1px solid var(--rule);
+}
+.rail li { margin: 0; }
+.rail a {
+  display: block;
+  padding: 0.42rem 0 0.42rem 0.9rem;
+  margin-left: -1px;
+  border-left: 2px solid transparent;
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 0.83rem;
+  line-height: 1.35;
+}
+.rail a:hover, .rail a:focus-visible {
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+.rail .num {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  margin-right: 0.45rem;
+}
+.rail .rail-title {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 0 0 0.7rem 0.9rem;
+  margin: 0;
+}
+
+main { min-width: 0; }
+
+/* ---------- sections ---------- */
+
+section { margin: 0 0 4rem; scroll-margin-top: 1.5rem; }
+
+h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.6vw, 1.95rem);
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  margin: 0 0 0.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--rule-strong);
+}
+h2 .stage {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+}
+h3 {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  margin: 2.1rem 0 0.6rem;
+}
+h4 {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 400;
+  margin: 1.6rem 0 0.5rem;
+}
+p { margin: 0 0 1rem; max-width: 68ch; }
+ul, ol.body-list { max-width: 68ch; padding-left: 1.15rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.42rem; }
+a { color: var(--accent); }
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.855em;
+  background: var(--surface-2);
+  padding: 0.08em 0.34em;
+  border-radius: 2px;
+  overflow-wrap: anywhere;
+}
+strong { font-weight: 650; }
+em { font-style: italic; color: var(--ink); }
+
+.lede {
+  font-size: 1.06rem;
+  color: var(--ink-2);
+  max-width: 64ch;
+  margin-bottom: 1.6rem;
+}
+
+/* ---------- callouts ---------- */
+
+.note {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 0.85rem 1.1rem;
+  margin: 1.5rem 0;
+  max-width: 68ch;
+  font-size: 0.92rem;
+}
+.note p:last-child { margin-bottom: 0; }
+.note .tag {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.35rem;
+}
+.note.caveat { border-left-color: var(--signal); background: var(--signal-soft); }
+.note.caveat .tag { color: var(--signal); }
+
+/* ---------- key numbers ---------- */
+
+.numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  margin: 1.8rem 0 2rem;
+}
+.numbers div { background: var(--surface); padding: 0.9rem 1rem; }
+.numbers .n {
+  font-family: var(--font-mono);
+  font-size: 1.32rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  display: block;
+  line-height: 1.2;
+}
+.numbers .k {
+  font-size: 0.76rem;
+  color: var(--ink-3);
+  display: block;
+  margin-top: 0.25rem;
+  line-height: 1.35;
+}
+
+/* ---------- figures ---------- */
+
+.fig { margin: 2rem 0 2.4rem; display: flex; flex-direction: column; gap: 0.8rem; }
+.fig-frame {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1.2rem;
+}
+.fig svg { display: block; width: 100%; height: auto; color: var(--ink); }
+.fig figcaption {
+  font-size: 0.84rem;
+  color: var(--ink-2);
+  max-width: 74ch;
+  line-height: 1.55;
+}
+.fig figcaption b {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 400;
+  margin-right: 0.5rem;
+}
+
+/* svg primitives */
+.d-box   { fill: var(--surface);  stroke: var(--rule-strong); stroke-width: 1.3; }
+.d-fill  { fill: var(--surface-2); stroke: var(--rule-strong); stroke-width: 1.3; }
+.d-ext   { fill: none; stroke: var(--rule-strong); stroke-width: 1.3; stroke-dasharray: 5 4; }
+.d-acc   { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; }
+.d-sig   { fill: var(--signal-soft); stroke: var(--signal); stroke-width: 1.6; }
+.d-rejb  { fill: var(--reject-soft); stroke: var(--reject); stroke-width: 1.3; }
+.d-nest  { fill: none; stroke: var(--rule-strong); stroke-width: 1.2; }
+
+.d-t     { fill: var(--ink); font-family: var(--font-body); font-size: 13px; }
+.d-t.b   { font-weight: 650; }
+.d-t.sm  { font-size: 11.5px; fill: var(--ink-2); }
+.d-m     { fill: var(--ink-2); font-family: var(--font-mono); font-size: 11px; }
+.d-m.hi  { fill: var(--accent); }
+.d-cap   { fill: var(--ink-3); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; }
+.d-rt    { fill: var(--reject); font-family: var(--font-mono); font-size: 11px; }
+.d-at    { fill: var(--accent); font-family: var(--font-mono); font-size: 11px; }
+.d-st    { fill: var(--signal); font-family: var(--font-mono); font-size: 11px; }
+
+.d-l     { fill: none; stroke: var(--rule-strong); stroke-width: 1.4; }
+.d-la    { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.d-lr    { fill: none; stroke: var(--reject); stroke-width: 1.3; stroke-dasharray: 4 3; }
+.d-ls    { fill: none; stroke: var(--signal); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.d-tick  { fill: none; stroke: var(--rule-strong); stroke-width: 1; }
+
+.h-grey  { fill: var(--rule-strong); }
+.h-acc   { fill: var(--accent); }
+.h-rej   { fill: var(--reject); }
+.h-sig   { fill: var(--signal); }
+
+.d-node  { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.4; }
+.d-node-o{ fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; }
+
+/* ---------- tables ---------- */
+
+.table-wrap { overflow-x: auto; margin: 1.4rem 0 1.8rem; border: 1px solid var(--rule); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 560px;
+  background: var(--surface);
+  font-size: 0.855rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.52rem 0.85rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+thead th {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 400;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--rule-strong);
+}
+tbody tr:last-child td { border-bottom: none; }
+td.mono, th.mono { font-family: var(--font-mono); font-size: 0.79rem; font-variant-numeric: tabular-nums; }
+td.val { font-family: var(--font-mono); font-size: 0.79rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- file tree ---------- */
+
+pre.tree {
+  font-family: var(--font-mono);
+  font-size: 0.775rem;
+  line-height: 1.62;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1.1rem 1.2rem;
+  overflow-x: auto;
+  margin: 1.4rem 0 1.8rem;
+  color: var(--ink-2);
+}
+pre.tree b { color: var(--ink); font-weight: 650; }
+pre.tree i { color: var(--ink-3); font-style: normal; }
+
+/* ---------- footer ---------- */
+
+footer {
+  border-top: 2px solid var(--ink);
+  padding-top: 1.5rem;
+  margin-top: 1rem;
+  font-size: 0.83rem;
+  color: var(--ink-3);
+  max-width: 70ch;
+}
+footer p { max-width: none; }
+
+a:focus-visible, .rail a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">ALICE ITS2 &middot; Track-based alignment</p>
+  <h1>ITS2 ML Alignment Workflow</h1>
+  <p class="standfirst">
+    A stage-by-stage description of the machine-learning alignment module for the ALICE Inner
+    Tracking System 2 &mdash; what each executable does, which files cross each boundary, how the
+    cost function is built from a helix fit, and how the learned network weights become
+    rigid-body alignment parameters for 24&thinsp;120 silicon sensors.
+  </p>
+  <dl class="meta">
+    <div><dt>Repository</dt><dd>ALICE-ITS2-Alignment-2024</dd></div>
+    <div><dt>Configuration tag</dt><dd>train20220419 &middot; Patch4_rejectBadTracks1</dd></div>
+    <div><dt>Sensors</dt><dd>24&thinsp;120 ALPIDE chips, 7 layers</dd></div>
+    <div><dt>Fit model</dt><dd>Circle (helix), B = 0.5&nbsp;T</dd></div>
+    <div><dt>Free parameters</dt><dd>4 DoF &times; sensor (&gamma;, T1, T2, T3)</dd></div>
+    <div><dt>Deployment</dt><dd>LHC Run 3, Pb&ndash;Pb 2023</dd></div>
+  </dl>
+</header>
+
+<div class="shell">
+
+  <nav class="rail" aria-label="Sections">
+    <p class="rail-title">Contents</p>
+    <ol>
+      <li><a href="#orientation"><span class="num">00</span>Orientation</a></li>
+      <li><a href="#pipeline"><span class="num">01</span>The pipeline end to end</a></li>
+      <li><a href="#inputs"><span class="num">02</span>Inputs and preconditions</a></li>
+      <li><a href="#beam"><span class="num">03</span>Beam-profile pass</a></li>
+      <li><a href="#prepare"><span class="num">04</span>Data preparation</a></li>
+      <li><a href="#network"><span class="num">05</span>Network topology</a></li>
+      <li><a href="#cost"><span class="num">06</span>The cost function</a></li>
+      <li><a href="#loop"><span class="num">07</span>The optimization loop</a></li>
+      <li><a href="#params"><span class="num">08</span>Weights to alignment parameters</a></li>
+      <li><a href="#outputs"><span class="num">09</span>Outputs and monitoring</a></li>
+      <li><a href="#chaining"><span class="num">10</span>Step chaining</a></li>
+      <li><a href="#config"><span class="num">11</span>Configuration reference</a></li>
+      <li><a href="#community"><span class="num">12</span>Notes for alignment groups</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+<!-- ==================== 00 ==================== -->
+<section id="orientation">
+  <h2><span class="stage">Section 00</span>Orientation</h2>
+
+  <p class="lede">
+    The module aligns the ITS2 by attaching one small linear neural network to every sensor and
+    training all of them simultaneously against a track-fit residual. It is a track-based
+    alignment expressed as a learning problem rather than as a single large linear system.
+  </p>
+
+  <p>
+    Each of the 24&thinsp;120 ALPIDE chips owns a <code>YSensorCorrection</code> object: a
+    two-input, three-output linear network with no hidden layer. It maps the measured cluster
+    position in the sensor frame, <code>(s1, s2)</code>, to a correction
+    <code>(cs1, cs2, cs3)</code>. The corrected hits of a multi-prong event are fitted with a
+    circle in the bending plane and a straight line in the <code>z</code>&ndash;<code>&beta;</code>
+    plane; the sum of normalized squared residuals is the cost. Gradients propagate back to the
+    per-sensor weights, and an analytic Jacobian re-expresses those weights as six rigid-body
+    alignment parameters, of which four are released in the present configuration.
+  </p>
+
+  <div class="numbers">
+    <div><span class="n">24 120</span><span class="k">independent sensor networks</span></div>
+    <div><span class="n">11</span><span class="k">network parameters per sensor</span></div>
+    <div><span class="n">6 &rarr; 4</span><span class="k">rigid-body DoF, released per sensor</span></div>
+    <div><span class="n">50 000</span><span class="k">source entries read per step</span></div>
+    <div><span class="n">&ge; 6</span><span class="k">tracks required per event</span></div>
+    <div><span class="n">5</span><span class="k">epochs per step</span></div>
+  </div>
+
+  <p>
+    Three nested repetition scales matter and are easy to confuse. An <strong>epoch</strong> is one
+    pass over the training events inside a single job. A <strong>step</strong> is one complete job:
+    five epochs, its own weight files, its own residual monitoring, its own archive. A
+    <strong>campaign</strong> is a sequence of steps driven by
+    <code>process_all_train.sh Tag stepI stepF</code>, in which each step is seeded from the
+    previous step's weights. Convergence is expected across steps, not within one.
+  </p>
+</section>
+
+<!-- ==================== 01 ==================== -->
+<section id="pipeline">
+  <h2><span class="stage">Section 01</span>The pipeline end to end</h2>
+
+  <p>
+    The figure below is the whole module. Everything to the left of a box is what it consumes,
+    everything to the right is what it leaves behind on disk. The dashed box at the top is
+    upstream of this repository: the input tree is produced by O<sup>2</sup> reconstruction and is
+    assumed to exist.
+  </p>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 1050 690" role="img" aria-label="End-to-end flow of the ITS2 machine-learning alignment module, from the O2 reconstruction input tree through beam-profile extraction, data preparation, network training, monitoring and geometry export, with the per-step loop closing from the archived step directory back into data preparation.">
+        <defs>
+          <marker id="f1a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-grey" points="0,0 10,4 0,8" />
+          </marker>
+          <marker id="f1s" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-sig" points="0,0 10,4 0,8" />
+          </marker>
+        </defs>
+
+        <!-- Row A : upstream -->
+        <rect class="d-ext" x="280" y="36" width="480" height="54" rx="2" />
+        <text class="d-t b" x="300" y="60">O&#178; reconstruction &mdash; tracks, clusters, primary vertex</text>
+        <text class="d-m" x="300" y="78">external to this repository</text>
+        <text class="d-cap" x="768" y="58">PRODUCES</text>
+        <text class="d-m" x="768" y="76">XXXXinput.root  (TTree DataInput)</text>
+
+        <line class="d-l" x1="520" y1="90" x2="520" y2="120" marker-end="url(#f1a)" />
+
+        <!-- Row B : beam profile -->
+        <rect class="d-box" x="280" y="126" width="480" height="48" rx="2" />
+        <text class="d-t b" x="300" y="156">run_profile_beam.C</text>
+        <text class="d-m" x="180" y="156" text-anchor="end">vertex distribution</text>
+        <line class="d-l" x1="188" y1="150" x2="272" y2="150" marker-end="url(#f1a)" />
+        <text class="d-m" x="768" y="156">YMLPBeamProfile.h</text>
+
+        <line class="d-l" x1="520" y1="174" x2="520" y2="208" marker-end="url(#f1a)" />
+
+        <!-- Row C : PrepareData -->
+        <rect class="d-acc" x="280" y="214" width="480" height="54" rx="2" />
+        <text class="d-t b" x="300" y="238">YAlignment::PrepareData</text>
+        <text class="d-m" x="300" y="256">event selection, sensor-boundary normalization</text>
+        <text class="d-m" x="272" y="232" text-anchor="end">o2sim_geometry.root</text>
+        <text class="d-m" x="272" y="250" text-anchor="end">ITSAlignment.root</text>
+        <text class="d-m" x="768" y="244">MLPTrain/XXXXtrain/XXXXtrain.root</text>
+
+        <line class="d-l" x1="520" y1="268" x2="520" y2="296" marker-end="url(#f1a)" />
+
+        <!-- Row D : Train -->
+        <rect class="d-acc" x="280" y="302" width="480" height="76" rx="2" />
+        <text class="d-t b" x="300" y="326">YAlignment::TrainMLP</text>
+        <text class="d-m" x="300" y="344">YMultiLayerPerceptron::Train &mdash; 5 epochs, kStochastic</text>
+        <text class="d-m" x="300" y="362">24 120 sensor networks updated in place</text>
+        <text class="d-m" x="272" y="332" text-anchor="end">weights.txt   (step s&minus;1)</text>
+        <text class="d-m" x="272" y="350" text-anchor="end">weightsDU.txt (step s&minus;1)</text>
+        <text class="d-m" x="272" y="368" text-anchor="end">UpdateSensorsList.txt</text>
+        <text class="d-m" x="768" y="332">weights/weights.txt</text>
+        <text class="d-m" x="768" y="350">weights/weightsDU.txt</text>
+        <text class="d-m" x="768" y="368">UpdateSensorsList.txt</text>
+
+        <line class="d-l" x1="520" y1="378" x2="520" y2="408" marker-end="url(#f1a)" />
+
+        <!-- Row E : monitoring dumps -->
+        <rect class="d-box" x="280" y="414" width="480" height="48" rx="2" />
+        <text class="d-t b" x="300" y="437">Residual, gradient and trending dumps</text>
+        <text class="d-m" x="300" y="454">DumpResiduals &middot; DumpCostGradients &middot; TrendingNetwork</text>
+        <text class="d-m" x="768" y="432">Residual_Epoch_At_*.root</text>
+        <text class="d-m" x="768" y="450">CostGradient_Epoch_At_*.txt</text>
+
+        <line class="d-l" x1="520" y1="462" x2="520" y2="492" marker-end="url(#f1a)" />
+
+        <!-- Row F : archive -->
+        <rect class="d-box" x="280" y="498" width="480" height="48" rx="2" />
+        <text class="d-t b" x="300" y="521">MLPTrain &rarr; MLPTrain_Step&lt;s&gt;</text>
+        <text class="d-m" x="300" y="538">renamed, then archived by process_all_train.sh</text>
+        <text class="d-m" x="768" y="528">MLPTrain_Step&lt;s&gt;.tgz</text>
+
+        <line class="d-l" x1="520" y1="546" x2="520" y2="580" marker-end="url(#f1a)" />
+
+        <!-- Row G : analysis -->
+        <rect class="d-box" x="280" y="586" width="480" height="62" rx="2" />
+        <text class="d-t b" x="300" y="610">Offline QA and geometry export</text>
+        <text class="d-m" x="300" y="628">monitor/analysis.sh &middot; AnalyzeMLP &middot; ReconstructGeometries</text>
+        <text class="d-m" x="768" y="610">Geom/XXXXGeom.root</text>
+        <text class="d-m" x="768" y="628">AlignParam &rarr; CCDB</text>
+
+        <!-- step loop -->
+        <path class="d-ls" d="M770,522 H1010 V241 H770" marker-end="url(#f1s)" />
+        <text class="d-st" x="1024" y="400" text-anchor="middle" transform="rotate(-90 1024 400)">step loop &nbsp; s = stepI &hellip; stepF</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Figure 1</b> The module reduced to seven stages and the files that join them. Only the two
+      teal stages hold the alignment model; everything else is preparation, bookkeeping or
+      inspection. The amber return path is the whole convergence mechanism: step
+      <code>s</code> begins from the weights and sensor list written by step <code>s&minus;1</code>.
+    </figcaption>
+  </figure>
+
+  <h3>Entry points</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Script or macro</th><th>Role</th><th>Invocation</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">process_all_master.sh</td><td>Loads the O<sup>2</sup> environment through <code>alienv</code>, then hands over to the campaign driver.</td><td class="val">./process_all_master.sh Tag stepI stepF</td></tr>
+        <tr><td class="mono">process_all_train.sh</td><td>Runs the beam-profile pass once, then loops over steps: writes <code>batch_train</code>, calls <code>process.sh</code>, renames the log, archives the step directory.</td><td class="val">called by the master</td></tr>
+        <tr><td class="mono">process.sh</td><td>One-line ROOT launcher: <code>root -l -b &lt; batch_train &gt; train.log</code>.</td><td class="val">called per step</td></tr>
+        <tr><td class="mono">batch_train</td><td>Generated per step. Loads <code>YDetectorGeometry.cxx</code>, then executes <code>run_train_circle.C(step)</code>.</td><td class="val">regenerated each iteration</td></tr>
+        <tr><td class="mono">run_train_circle.C</td><td>The actual job: configures <code>YAlignment</code>, trains, and marshals every output into <code>MLPTrain_Step&lt;s&gt;</code>.</td><td class="val">.x run_train_circle.C(s)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note caveat">
+    <span class="tag">Version note</span>
+    <p>
+      The <code>batch_train</code> file committed in the repository still contains the hard-coded
+      step number from its last manual run. It is overwritten on every iteration by
+      <code>process_all_train.sh</code>, so its committed content is not the configuration in use.
+    </p>
+  </div>
+</section>
+
+<!-- ==================== 02 ==================== -->
+<section id="inputs">
+  <h2><span class="stage">Section 02</span>Inputs and preconditions</h2>
+
+  <p>
+    Four inputs must be in the working directory before a campaign starts. Only the first is
+    produced per data sample; the others are conditions.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>File</th><th>Content</th><th>Consumed by</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">XXXXinput.root</td>
+          <td>Tree <code>DataInput</code> of <code>EventData</code> objects. Each event carries the
+          primary vertex <code>(X1, X2, X3)</code>, its momentum <code>(P1, P2, P3)</code>, an event
+          number and a <code>TClonesArray</code> of <code>TrackData</code>. Each track holds, per
+          layer, the sensor-frame cluster position <code>(s1, s2, s3)</code>, the pixel
+          <code>(row, col)</code>, the full addressing chain
+          <code>Layer / HalfBarrel / Stave / HalfStave / Module / Chip / ChipID</code>, and the
+          track kinematics <code>p, pT, &theta;, &phi;, &eta;</code> together with three vertex
+          variants <code>tv, tv_X0, tv_DCA</code>.</td>
+          <td>beam-profile pass, <code>PrepareData</code></td>
+        </tr>
+        <tr>
+          <td class="mono">o2sim_geometry.root</td>
+          <td>The ideal ITS geometry, loaded through <code>o2::base::GeometryManager</code>.</td>
+          <td><code>YDetectorGeometry</code></td>
+        </tr>
+        <tr>
+          <td class="mono">ITSAlignment.root</td>
+          <td>The <em>starting</em> alignment: a <code>std::vector&lt;o2::detectors::AlignParam&gt;</code>
+          stored under the key <code>ccdb_object</code>, applied to the geometry at construction.
+          Everything the module learns is a correction on top of this.</td>
+          <td><code>YDetectorGeometry</code></td>
+        </tr>
+        <tr>
+          <td class="mono">ITSClusterDictionary_20220903.root<br>o2simtopology_13294.json</td>
+          <td>Cluster topology dictionary used when the input tree is produced.</td>
+          <td>upstream tooling</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    <code>YDetectorGeometry</code> is a process-wide singleton reached through the
+    <code>yGEOM</code> macro. Its constructor loads the geometry, applies the starting alignment,
+    instantiates <code>o2::its::GeometryTGeo</code> and fills the <code>T2L</code>,
+    <code>T2GRot</code> and <code>L2G</code> matrix caches. Every coordinate transform in the
+    module &mdash; <code>GToS</code>, <code>SToG</code>, <code>LToG</code>, <code>GToL</code> &mdash;
+    goes through it, so the starting alignment is baked into the geometry rather than carried as an
+    explicit offset.
+  </p>
+
+  <h3>The sensor frame</h3>
+  <p>
+    The module works in a sensor-local frame <code>(s1, s2, s3)</code> that differs from the O<sup>2</sup>
+    local frame and differs again between barrels. For inner-barrel chips
+    <code>(s1, s2, s3) = (&minus;l3, &minus;l1, l2)</code> with <code>l1</code> the row direction,
+    <code>l3</code> the column direction and <code>l2</code> the sensor normal. Outer-barrel chips
+    additionally flip sign according to their position within the module, which the code tracks
+    through the per-sensor mounting direction <code>fmntdir = &plusmn;1</code>. In this frame
+    <code>s1</code> and <code>s2</code> span the sensor plane and <code>s3</code> is the normal, so
+    a correction along <code>s3</code> is a displacement out of the plane.
+  </p>
+</section>
+
+<!-- ==================== 03 ==================== -->
+<section id="beam">
+  <h2><span class="stage">Section 03</span>Beam-profile pass</h2>
+
+  <p>
+    <code>run_profile_beam.C</code> runs once per campaign, before the first step. It projects the
+    reconstructed primary vertices into three <code>z</code> slices of half-width 1.5&nbsp;cm,
+    centered at <code>z = &minus;7.5, 0, +7.5</code>&nbsp;cm, fits a Gaussian to the
+    <code>x</code> and <code>y</code> projection of each slice, and fits a first-order polynomial
+    to the three resulting means. The four coefficients are written as preprocessor defines into
+    <code>YMLPBeamProfile.h</code>, which is included by
+    <code>YMultiLayerPerceptron.cxx</code> at compile time.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Define</th><th>Meaning</th><th>Value in the committed header</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">BeamProfileXZ0</td><td>beam-line x intercept (cm)</td><td class="val">&minus;0.058861</td></tr>
+        <tr><td class="mono">BeamProfileXZ1</td><td>beam-line dx/dz</td><td class="val">&minus;2.89954 &times; 10<sup>&minus;4</sup></td></tr>
+        <tr><td class="mono">BeamProfileYZ0</td><td>beam-line y intercept (cm)</td><td class="val">&minus;0.0440033</td></tr>
+        <tr><td class="mono">BeamProfileYZ1</td><td>beam-line dy/dz</td><td class="val">&minus;6.97678 &times; 10<sup>&minus;4</sup></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note caveat">
+    <span class="tag">Active configuration</span>
+    <p>
+      In the current version the fitted beam line is <em>not</em> the constraint point used in the
+      cost. <code>GetCost_Beam_CircleFit</code> takes the beam center directly from the per-event
+      reconstructed vertex, <code>BeamCenter(BeamPos[0], BeamPos[1], BeamPos[2])</code>; the
+      parameterized alternative <code>BeamCenter(XZ1&middot;z + XZ0, YZ1&middot;z + YZ0, z)</code>
+      is present but commented out. The pass is still run because the header must exist for the
+      translation unit to compile, and because the fitted slope is a useful diagnostic of the
+      beam-line quality of the sample.
+    </p>
+  </div>
+</section>
+
+<!-- ==================== 04 ==================== -->
+<section id="prepare">
+  <h2><span class="stage">Section 04</span>Data preparation</h2>
+
+  <p>
+    <code>YAlignment::PrepareData(nDATA, jparallel)</code> converts the reconstruction output into
+    the flat training tree the network reads, and at the same time assembles the textual
+    description of the network topology.
+  </p>
+
+  <h4>Topology string</h4>
+  <p>
+    The layout handed to <code>YMultiLayerPerceptron</code> is assembled from three groups:
+    <strong>inputs</strong> <code>s1[0..6], s2[0..6]</code> &mdash; fourteen sensor-plane
+    coordinates; <strong>outputs</strong> <code>Stave[l], Chip[l], ChipID[l]</code> for seven
+    layers &mdash; twenty-one addressing branches that route each hit to its sensor network; and an
+    <strong>addition</strong> group <code>X1, X2, X3, P1, P2, P3, evno, ntracks</code> carrying the
+    event-level quantities. The output group is addressing, not regression targets: the
+    quantity being minimized is the track fit, not a labelled truth.
+  </p>
+
+  <h4>Selection and normalization</h4>
+  <ul>
+    <li>Events with fewer than <code>nTrackMax = 6</code> tracks are skipped &mdash; the cost is
+      defined on a multi-prong event sharing one vertex.</li>
+    <li>Events with more than one associated vertex in the time frame
+      (<code>nvtx &gt; 1</code>) are skipped, to avoid pile-up contaminating the vertex
+      constraint.</li>
+    <li>For every one of the 24&thinsp;120 sensors the active-area corners are transformed
+      <code>(row, col) = (0,0)</code> and <code>(511, 1023)</code> through
+      <code>LToG</code> then <code>GToS</code>, giving per-sensor minima, maxima and spans in
+      <code>s1</code> and <code>s2</code>. These define the input normalization; the network sees
+      coordinates shifted to <code>[&minus;0.5, +0.5]</code> via
+      <code>fNorm_shift = 0.5</code>.</li>
+    <li>An event-weight hook (<code>GetEventWeight</code>, based on the <code>z</code> acceptance
+      of each layer) exists but the cut on it is commented out in the current version.</li>
+  </ul>
+
+  <p>
+    The result is <code>MLPTrain/XXXXtrain/XXXXtrain.root</code> containing
+    <code>InputTree</code>. The training and test samples are then carved out of it by event
+    number: <code>evno % 10 &isin; [0, 6)</code> is the training set, <code>[6, 8)</code> is the
+    test set. The remaining 20&nbsp;% is not attached to either <code>TEventList</code> and is
+    therefore held back entirely &mdash; it never enters the loss, the line search or the early-stop
+    logic.
+  </p>
+</section>
+
+<!-- ==================== 05 ==================== -->
+<section id="network">
+  <h2><span class="stage">Section 05</span>Network topology</h2>
+
+  <p>
+    There is no deep network anywhere in this module. The model is 24&thinsp;120 copies of a
+    single affine map, plus a hierarchy of shared units that is built but currently not trained.
+  </p>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 980 400" role="img" aria-label="Left: the per-sensor network, two inputs s1 and s2 fully connected to three linear outputs cs1, cs2 and cs3, giving six synapse weights and five neuron offsets. Right: the six rigid-body alignment parameters of the same sensor, of which the in-plane rotation gamma and the three translations are released while the two out-of-plane rotations alpha and beta are frozen. An analytic Jacobian links the two descriptions.">
+        <defs>
+          <marker id="f4a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-acc" points="0,0 10,4 0,8" />
+          </marker>
+          <marker id="f4b" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-acc" points="0,0 10,4 0,8" />
+          </marker>
+        </defs>
+
+        <!-- left panel -->
+        <text class="d-cap" x="40" y="34">NETWORK DESCRIPTION &mdash; YSensorCorrection</text>
+        <rect class="d-box" x="40" y="48" width="330" height="286" rx="2" />
+
+        <!-- synapses -->
+        <line class="d-l" x1="118" y1="150" x2="286" y2="112" />
+        <line class="d-l" x1="118" y1="150" x2="286" y2="184" />
+        <line class="d-l" x1="118" y1="150" x2="286" y2="256" />
+        <line class="d-l" x1="118" y1="222" x2="286" y2="112" />
+        <line class="d-l" x1="118" y1="222" x2="286" y2="184" />
+        <line class="d-l" x1="118" y1="222" x2="286" y2="256" />
+
+        <circle class="d-node" cx="112" cy="150" r="21" />
+        <circle class="d-node" cx="112" cy="222" r="21" />
+        <text class="d-t" x="112" y="155" text-anchor="middle">s1</text>
+        <text class="d-t" x="112" y="227" text-anchor="middle">s2</text>
+
+        <circle class="d-node-o" cx="292" cy="112" r="21" />
+        <circle class="d-node-o" cx="292" cy="184" r="21" />
+        <circle class="d-node-o" cx="292" cy="256" r="21" />
+        <text class="d-t" x="292" y="117" text-anchor="middle">cs1</text>
+        <text class="d-t" x="292" y="189" text-anchor="middle">cs2</text>
+        <text class="d-t" x="292" y="261" text-anchor="middle">cs3</text>
+
+        <text class="d-m" x="112" y="98" text-anchor="middle">measured</text>
+        <text class="d-m" x="292" y="66" text-anchor="middle">correction</text>
+
+        <text class="d-m" x="60" y="306">6 synapse weights &nbsp;+&nbsp; 5 neuron offsets</text>
+        <text class="d-m" x="60" y="322">structure &quot;s1,s2:0:cs1,cs2,cs3&quot; &mdash; linear, no hidden layer</text>
+
+        <!-- bridge -->
+        <path class="d-la" d="M386,168 H556" marker-end="url(#f4a)" />
+        <path class="d-la" d="M556,214 H386" marker-end="url(#f4b)" />
+        <text class="d-at" x="471" y="150" text-anchor="middle">&part;w/&part;(&alpha;,&beta;,&gamma;) &nbsp; &part;b/&part;(T1,T2,T3)</text>
+        <text class="d-m" x="471" y="240" text-anchor="middle">CalculateSCWeights()</text>
+        <text class="d-m" x="471" y="256" text-anchor="middle">exact, from the L2G matrix</text>
+
+        <!-- right panel -->
+        <text class="d-cap" x="572" y="34">GEOMETRIC DESCRIPTION &mdash; rigid body</text>
+        <rect class="d-box" x="572" y="48" width="368" height="286" rx="2" />
+
+        <rect class="d-fill" x="596" y="72" width="320" height="34" rx="2" />
+        <text class="d-t" x="614" y="94">&alpha; &nbsp; rotation about s1</text>
+        <text class="d-rt" x="898" y="94" text-anchor="end">frozen</text>
+
+        <rect class="d-fill" x="596" y="112" width="320" height="34" rx="2" />
+        <text class="d-t" x="614" y="134">&beta; &nbsp; rotation about s2</text>
+        <text class="d-rt" x="898" y="134" text-anchor="end">frozen</text>
+
+        <rect class="d-acc" x="596" y="152" width="320" height="34" rx="2" />
+        <text class="d-t" x="614" y="174">&gamma; &nbsp; rotation about the normal</text>
+        <text class="d-at" x="898" y="174" text-anchor="end">released</text>
+
+        <rect class="d-acc" x="596" y="192" width="320" height="34" rx="2" />
+        <text class="d-t" x="614" y="214">T1 &nbsp; translation</text>
+        <text class="d-at" x="898" y="214" text-anchor="end">released</text>
+
+        <rect class="d-acc" x="596" y="232" width="320" height="34" rx="2" />
+        <text class="d-t" x="614" y="254">T2 &nbsp; translation</text>
+        <text class="d-at" x="898" y="254" text-anchor="end">released</text>
+
+        <rect class="d-acc" x="596" y="272" width="320" height="34" rx="2" />
+        <text class="d-t" x="614" y="294">T3 &nbsp; translation</text>
+        <text class="d-at" x="898" y="294" text-anchor="end">released</text>
+
+        <text class="d-m" x="596" y="322">Update_aR = {0, 0, 1} &nbsp; Update_aT = {1, 1, 1}</text>
+
+        <text class="d-m" x="40" y="366">Multiplicity: one such pair per sensor &times; 24 120 sensors &rarr; 265 320 network parameters, 96 480 released geometric parameters.</text>
+        <text class="d-m" x="40" y="384">Weights are stored in both descriptions: weights.txt carries 11 network values and 6 alignment values per ChipID.</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Figure 2</b> The same sensor, described twice. Training moves the network weights; the
+      Jacobian keeps the geometric description exactly consistent with them. Freezing
+      <code>&alpha;</code> and <code>&beta;</code> is a deliberate choice, not a limitation of the
+      formalism &mdash; both gradients are computed, only their update coefficients are zero.
+    </figcaption>
+  </figure>
+
+  <h3>The detector-unit hierarchy</h3>
+  <p>
+    Alongside the flat sensor collection, <code>BuildDetectorUnitNetwork</code> constructs an
+    eight-level tree of <code>YSensorCorrection</code> objects that share parameters across
+    increasingly fine groupings:
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="mono">Level</th><th>Grouping</th><th>Multiplicity</th></tr></thead>
+      <tbody>
+        <tr><td class="val">0</td><td>whole detector</td><td class="val">1</td></tr>
+        <tr><td class="val">1</td><td>barrel group &mdash; IB, OB1, OB2</td><td class="val">3</td></tr>
+        <tr><td class="val">2</td><td>half-stave index</td><td class="val">1 or 2 per group</td></tr>
+        <tr><td class="val">3</td><td>chip position along z within a stave</td><td class="val">9 &hellip; 98</td></tr>
+        <tr><td class="val">4</td><td>layer within the group</td><td class="val">2 or 3</td></tr>
+        <tr><td class="val">5</td><td>half-barrel</td><td class="val">2</td></tr>
+        <tr><td class="val">6</td><td>stave index within a half-barrel</td><td class="val">6 &hellip; 24</td></tr>
+        <tr><td class="val">7</td><td>half-stave within the stave</td><td class="val">1 or 2</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    This is the natural home for a coarse-to-fine alignment: releasing level 1 first fixes the
+    three barrel groups as rigid bodies, then progressively finer levels absorb the remaining
+    structure. The tree is built, its update states are initialized, and its weights are dumped
+    every epoch into <code>weightsDU*.txt</code>.
+  </p>
+  <div class="note caveat">
+    <span class="tag">Active configuration</span>
+    <p>
+      In the present version the hierarchy is <em>inert</em>. Every
+      <code>SetUpdateState(true)</code> call in
+      <code>SetDetectorUnitNetworkUpdateStateUser</code> is commented out, and the learning method
+      selected in <code>run_train_circle.C</code> is <code>kStochastic</code>, which updates the
+      per-sensor networks directly rather than through the hierarchy. The hierarchical path
+      (<code>kBatchDetectorUnitUser</code>, <code>ComputeDCDwDetectorUnit</code>,
+      <code>MLP_BatchDetectorUnit</code>) is complete but not exercised. The
+      <code>weightsDU</code> files are consequently written and re-read as identity carriers.
+    </p>
+  </div>
+</section>
+
+<!-- ==================== 06 ==================== -->
+<section id="cost">
+  <h2><span class="stage">Section 06</span>The cost function</h2>
+
+  <p>
+    This is the physics of the module. A cost is defined per track, summed over the tracks of an
+    event, normalized by the event's degrees of freedom, and summed over events. The per-track
+    chain runs in <code>GetCost_Beam_CircleFit</code>.
+  </p>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 940 820" role="img" aria-label="The per-track cost chain: measured hits are corrected by their sensor networks, transformed to the global frame, fitted with a circle in the bending plane, screened by a vertex guard and a transverse-momentum window, projected back onto the sensor planes, fitted in z against the azimuthal parameter, and reduced to normalized residuals whose squares form the track cost. Four rejection exits leave the chain at the fit-status, vertex, momentum and quality checks.">
+        <defs>
+          <marker id="f3a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-grey" points="0,0 10,4 0,8" />
+          </marker>
+          <marker id="f3r" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-rej" points="0,0 10,4 0,8" />
+          </marker>
+        </defs>
+
+        <!-- spine boxes -->
+        <rect class="d-box" x="60" y="24" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="44">Read the track</text>
+        <text class="d-m" x="80" y="61">up to 7 hits (s1, s2) + ChipID per layer</text>
+        <line class="d-l" x1="270" y1="70" x2="270" y2="90" marker-end="url(#f3a)" />
+
+        <rect class="d-acc" x="60" y="96" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="116">Apply the sensor networks</text>
+        <text class="d-m" x="80" y="133">(s1, s2) &rarr; (cs1, cs2, cs3), one network per hit</text>
+        <line class="d-l" x1="270" y1="142" x2="270" y2="162" marker-end="url(#f3a)" />
+
+        <rect class="d-box" x="60" y="168" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="188">Transform to the global frame</text>
+        <text class="d-m" x="80" y="205">corrected sensor point &rarr; SToG &rarr; (x, y, z)</text>
+        <line class="d-l" x1="270" y1="214" x2="270" y2="234" marker-end="url(#f3a)" />
+
+        <rect class="d-box" x="60" y="240" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="260">Circle fit in the bending plane</text>
+        <text class="d-m" x="80" y="277">circle3Dfit on 7 hits + the vertex point</text>
+        <path class="d-lr" d="M480,263 H560" marker-end="url(#f3r)" />
+        <text class="d-rt" x="570" y="259">fit status = 0</text>
+        <text class="d-rt" x="570" y="274">retried with 3 seed strategies</text>
+        <line class="d-l" x1="270" y1="286" x2="270" y2="306" marker-end="url(#f3a)" />
+
+        <rect class="d-box" x="60" y="312" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="332">Vertex guard</text>
+        <text class="d-m" x="80" y="349">fitted transverse vertex within 0.1 cm of the z axis</text>
+        <path class="d-lr" d="M480,335 H560" marker-end="url(#f3r)" />
+        <text class="d-rt" x="570" y="339">drop the track</text>
+        <line class="d-l" x1="270" y1="358" x2="270" y2="378" marker-end="url(#f3a)" />
+
+        <rect class="d-box" x="60" y="384" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="404">Momentum window</text>
+        <text class="d-m" x="80" y="421">pT = 0.3 &middot; B &middot; R &isin; [0.40, 2.00] GeV/c</text>
+        <path class="d-lr" d="M480,407 H560" marker-end="url(#f3r)" />
+        <text class="d-rt" x="570" y="403">drop the track</text>
+        <text class="d-rt" x="570" y="418">soft tracks: too much scattering</text>
+        <line class="d-l" x1="270" y1="430" x2="270" y2="450" marker-end="url(#f3a)" />
+
+        <rect class="d-box" x="60" y="456" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="476">Project onto the sensor planes</text>
+        <text class="d-m" x="80" y="493">&beta; linearization, then GetProjectionPoints</text>
+        <line class="d-l" x1="270" y1="502" x2="270" y2="522" marker-end="url(#f3a)" />
+
+        <rect class="d-box" x="60" y="528" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="548">Longitudinal fit</text>
+        <text class="d-m" x="80" y="565">circle3Dfit_Z: straight line z against &beta;</text>
+        <line class="d-l" x1="270" y1="574" x2="270" y2="594" marker-end="url(#f3a)" />
+
+        <rect class="d-acc" x="60" y="600" width="420" height="60" rx="2" />
+        <text class="d-t b" x="80" y="620">Residuals in the sensor frame</text>
+        <text class="d-m" x="80" y="637">&Delta;s = s(projected) &minus; s(measured)</text>
+        <text class="d-m" x="80" y="653">&chi; = &Delta;s / &sigma;(R, layer, B, axis)</text>
+        <line class="d-l" x1="270" y1="660" x2="270" y2="680" marker-end="url(#f3a)" />
+
+        <rect class="d-box" x="60" y="686" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="706">Quality gate</text>
+        <text class="d-m" x="80" y="723">&ge; 5 valid hits, &Sigma;&chi;&#178; &le; 110, every |&chi;| &le; 100</text>
+        <path class="d-lr" d="M480,709 H560" marker-end="url(#f3r)" />
+        <text class="d-rt" x="570" y="713">AddTrackLoss(), cost set to 0</text>
+        <line class="d-l" x1="270" y1="732" x2="270" y2="752" marker-end="url(#f3a)" />
+
+        <rect class="d-acc" x="60" y="758" width="420" height="46" rx="2" />
+        <text class="d-t b" x="80" y="778">Track cost = &Sigma;&chi;&#178;</text>
+        <text class="d-m" x="80" y="795">over 7 hits and the vertex point</text>
+
+        <!-- sigma annotation -->
+        <rect class="d-fill" x="580" y="470" width="330" height="176" rx="2" />
+        <text class="d-cap" x="600" y="494">RESOLUTION MODEL</text>
+        <text class="d-m" x="600" y="518">&sigma;&#178; = a(layer)&#178; + b(layer)&#178; / (0.3&thinsp;B&thinsp;R)&#178;</text>
+        <text class="d-m" x="600" y="540">a &mdash; intrinsic, 45/55 &micro;m in s1, 40 &micro;m in s2</text>
+        <text class="d-m" x="600" y="558">b &mdash; scattering, 30/110 &micro;m in s1</text>
+        <text class="d-m" x="600" y="576">vertex point: 5 &micro;m intrinsic, 20 &micro;m scattering</text>
+        <text class="d-m" x="600" y="602">The scattering term makes low-pT tracks</text>
+        <text class="d-m" x="600" y="620">contribute less &mdash; a built-in weighting,</text>
+        <text class="d-m" x="600" y="638">not an ad-hoc down-weight.</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Figure 3</b> One track through the cost chain. Rejected tracks are counted as loss and
+      contribute exactly zero, so the loss reported per epoch is normalized by the number of
+      <em>surviving</em> events and tracks, not by the number read. Every stage also fills the
+      per-sensor histogram <code>hNtracksByRejection</code>, which is what makes the rejection
+      profile inspectable sensor by sensor.
+    </figcaption>
+  </figure>
+
+  <h3>From track cost to event cost</h3>
+  <p>
+    <code>GetCost_Beam</code> sums the track costs of an event and divides by
+    <code>ndf = (2(n<sub>layer</sub> + 1) &minus; 4) &times; n<sub>used</sub> + 1 = 12&thinsp;n<sub>used</sub> + 1</code>,
+    where <code>n<sub>used</sub></code> is the number of tracks that survived. Two coordinates per
+    hit across seven layers plus the vertex point give sixteen constraints; four helix parameters
+    are fitted; the extra unit accounts for the shared vertex. If every track of an event is
+    rejected the event itself is counted as lost and contributes zero.
+  </p>
+
+  <h3>The charge-symmetry term</h3>
+  <p>
+    A second contribution is added at the epoch level rather than per track. For each of twenty
+    azimuthal patches the module accumulates <code>&Sigma; q &middot; pT</code> over the tracks
+    falling in that patch. A residual net charge&ndash;momentum asymmetry in a &phi; sector is the
+    signature of a curvature bias &mdash; a sagitta-like weak mode that leaves the track
+    <code>&chi;&#178;</code> almost untouched while systematically distorting the momentum scale.
+    The absolute value of the sum, normalized by the number of training tracks, is added to the
+    reported loss, and the positive and negative track counts per patch are printed each epoch so
+    that the asymmetry can be watched directly.
+  </p>
+</section>
+
+<!-- ==================== 07 ==================== -->
+<section id="loop">
+  <h2><span class="stage">Section 07</span>The optimization loop</h2>
+
+  <p>
+    <code>YMultiLayerPerceptron::Train(nEpoch, "graph, text, update=1")</code> holds the loop. Its
+    structure is four nested scales, and each boundary is where something is written to disk.
+  </p>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 960 470" role="img" aria-label="Four nested scopes of the training loop. The step scope loads and dumps weights and the update-sensor list. Inside it the epoch scope evaluates the cost, dumps residuals and snapshots weights. Inside that the event scope requires at least six tracks and one vertex and normalizes by degrees of freedom. Inside that the track scope performs the circle fit and the selection cuts, and innermost the hit scope evaluates one sensor network and one residual.">
+        <defs>
+          <marker id="f2a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-grey" points="0,0 10,4 0,8" />
+          </marker>
+        </defs>
+
+        <rect class="d-nest" x="24" y="24" width="530" height="420" rx="3" />
+        <text class="d-cap" x="40" y="46">STEP &nbsp; s</text>
+
+        <rect class="d-nest" x="54" y="64" width="470" height="360" rx="3" />
+        <text class="d-cap" x="70" y="86">EPOCH &nbsp; e = 0 &hellip; 4</text>
+
+        <rect class="d-nest" x="84" y="104" width="410" height="300" rx="3" />
+        <text class="d-cap" x="100" y="126">EVENT &nbsp; time frame</text>
+
+        <rect class="d-nest" x="114" y="144" width="350" height="240" rx="3" />
+        <text class="d-cap" x="130" y="166">TRACK &nbsp; prong t = 0 &hellip; 5</text>
+
+        <rect class="d-acc" x="144" y="184" width="290" height="180" rx="3" />
+        <text class="d-cap" x="160" y="206">HIT &nbsp; layer &times; sensor</text>
+        <text class="d-t" x="160" y="234">Evaluate the sensor network</text>
+        <text class="d-m" x="160" y="252">2 inputs &rarr; 3 outputs, 11 parameters</text>
+        <text class="d-t" x="160" y="282">Accumulate &part;C/&part;w</text>
+        <text class="d-m" x="160" y="300">per synapse and per neuron offset</text>
+        <text class="d-t" x="160" y="330">Contribute &chi;&#178; to the track cost</text>
+        <text class="d-m" x="160" y="348">and one entry to the residual monitor</text>
+
+        <!-- annotations -->
+        <line class="d-tick" x1="150" y1="40" x2="590" y2="40" />
+        <text class="d-m" x="600" y="44">load / dump weights.txt, weightsDU.txt, UpdateSensorsList.txt</text>
+
+        <line class="d-tick" x1="190" y1="80" x2="590" y2="80" />
+        <text class="d-m" x="600" y="84">MLP_StochasticArr &rarr; CalculateSCWeights &rarr; weight update</text>
+        <text class="d-m" x="600" y="102">DumpResiduals(e), DumpCostGradients(e), weight snapshot</text>
+
+        <line class="d-tick" x1="230" y1="120" x2="590" y2="120" />
+        <text class="d-m" x="600" y="124">skip if ntracks &lt; 6 or nvtx &gt; 1</text>
+        <text class="d-m" x="600" y="142">cost normalized by ndf = 12&thinsp;n&#8202;+&#8202;1</text>
+
+        <line class="d-tick" x1="270" y1="160" x2="590" y2="160" />
+        <text class="d-m" x="600" y="164">circle3Dfit, vertex guard, pT window, quality gate</text>
+        <text class="d-m" x="600" y="182">rejected tracks add to the loss counter</text>
+
+        <line class="d-tick" x1="310" y1="200" x2="590" y2="200" />
+        <text class="d-m" x="600" y="204">one of 24 120 networks, selected by ChipID</text>
+
+        <!-- epoch guard box -->
+        <rect class="d-fill" x="596" y="252" width="340" height="182" rx="2" />
+        <text class="d-cap" x="614" y="276">EPOCH GUARD &mdash; learning-rate backtracking</text>
+        <text class="d-m" x="614" y="300">if  C(e) &gt; 1.005 &middot; C(e&minus;1)  or  C(e) &gt; 1.02 &middot; C(init)</text>
+        <text class="d-m" x="614" y="322">&nbsp;&nbsp;&rarr; reload the previous epoch's weights</text>
+        <text class="d-m" x="614" y="340">&nbsp;&nbsp;&rarr; &eta; &larr; &eta; / &radic;10</text>
+        <text class="d-m" x="614" y="358">&nbsp;&nbsp;&rarr; retry the same epoch</text>
+        <text class="d-m" x="614" y="382">after 4 failed trials the step terminates early</text>
+        <text class="d-m" x="614" y="406">a NaN in either loss also terminates the step</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Figure 4</b> The nesting, and what crosses each boundary. The epoch guard is the only
+      adaptive element in the schedule: the learning rate is otherwise constant within a step and
+      reset to its nominal value at the start of the next one.
+    </figcaption>
+  </figure>
+
+  <h3>Epoch &minus;1: the baseline</h3>
+  <p>
+    Before the first update the module performs a full evaluation pass labelled epoch
+    <code>&minus;1</code>. It calls <code>PrepareDumpResiduals</code> and
+    <code>ComputeTrackProfile</code>, evaluates the training and test costs, and writes
+    <code>Residual_Epoch_At_-1.root</code>, <code>NTracksBySensor</code>, and the sensor and
+    half-stave track-occupancy plots. This baseline is what every later epoch is compared against,
+    and it is also the pass that populates the update-sensor list. Setting
+    <code>nEPOCH = 0</code> makes the job stop after it &mdash; the standard way to produce
+    monitoring for an existing weight set without training.
+  </p>
+
+  <h3>Update-sensor list</h3>
+  <p>
+    <code>UpdateSensorsList.txt</code> carries one line per ChipID with the number of tracks seen
+    and a status flag. Its behavior is set at compile time by
+    <code>MONITORONLYUPDATES_MODE</code>:
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="mono">Mode</th><th>Behavior</th></tr></thead>
+      <tbody>
+        <tr><td class="val">&minus;1</td><td>Flexible &mdash; the list is regenerated from the occupancy at every epoch.</td></tr>
+        <tr><td class="val">0</td><td>Generate &mdash; the list is produced from the epoch &minus;1 pass and the job returns without training.</td></tr>
+        <tr><td class="val">1</td><td><strong>Fixed (current)</strong> &mdash; the list is loaded from the previous step and re-emitted unchanged, so the set of sensors under correction is stable across a campaign.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    The occupancy threshold <code>Min_Cluster_by_Sensor</code> is 0 in the committed configuration,
+    so no sensor is excluded on statistics alone; the list is inherited rather than recomputed.
+  </p>
+
+  <h3>Learning rate and schedule</h3>
+  <p>
+    The nominal learning rate is built from a target resolution rather than tuned as an abstract
+    number: <code>&eta; = UpdateConstant &times; UpdateScale &times; (DETRES &times; 10<sup>&minus;4</sup>)&#178;</code>
+    with <code>0.05</code>, <code>10<sup>&minus;7</sup></code> and <code>DETRES = 1000&nbsp;&micro;m</code>,
+    giving <code>&eta; = 5 &times; 10<sup>&minus;11</sup></code> in the squared-centimeter units of
+    the cost. <code>YAlignment::TrainMLP</code> additionally sets
+    <code>&tau; = 100&thinsp;e<sup>&minus;0.1&thinsp;s</sup></code>, annealing the line-search
+    bracket expansion factor across the campaign; <code>&tau;</code> is consumed only by the line
+    search of <code>kSteepestDescent</code> and is therefore inactive under the stochastic method
+    selected in the current version.
+  </p>
+</section>
+
+<!-- ==================== 08 ==================== -->
+<section id="params">
+  <h2><span class="stage">Section 08</span>Weights to alignment parameters</h2>
+
+  <p>
+    <code>CalculateSCWeights</code> is where the module stops being a neural network and becomes an
+    alignment. It runs per sensor, inside the weight update, and performs three operations in
+    sequence.
+  </p>
+
+  <ol class="body-list">
+    <li>
+      <strong>Assemble the geometric context.</strong> The sensor's local-to-global matrix is
+      decomposed into a rotation <code>R<sub>geom</sub></code> and a translation
+      <code>T<sub>geom</sub></code>. Two constant matrices, a signed permutation
+      <code>P</code> carrying the mounting direction and an axis-order matrix <code>O</code>, map
+      between the O<sup>2</sup> local frame and the sensor frame used here. A diagonal matrix
+      <code>D1 = diag(1/d1, 1/d2, 1)</code> with <code>d1 = 2.991253&nbsp;cm</code> and
+      <code>d2 = 1.373568&nbsp;cm</code> undoes the input normalization, and a small offset
+      <code>D2</code> absorbs the sensor-frame origin shift.
+    </li>
+    <li>
+      <strong>Differentiate the rigid-body map analytically.</strong> For each of
+      <code>&alpha;, &beta;, &gamma;</code> the derivative of the rotation matrix is written out in
+      closed form and conjugated into the network's parameter space, giving
+      <code>&part;w<sub>ij</sub>/&part;&alpha;</code> and <code>&part;b<sub>i</sub>/&part;&alpha;</code>
+      and their counterparts. The translation derivatives are simply the columns of
+      <code>R<sub>geom</sub>PO</code> transposed. Contracting these with the accumulated
+      <code>&part;C/&part;w</code> yields <code>&part;C/&part;&alpha;</code> through
+      <code>&part;C/&part;T3</code> exactly, with no finite differences anywhere.
+    </li>
+    <li>
+      <strong>Update and write back.</strong> The six geometric parameters are advanced with the
+      per-degree-of-freedom coefficients <code>Update_aR = {0, 0, 1}</code> and
+      <code>Update_aT = {1, 1, 1}</code>, then the network weights are recomputed from the updated
+      geometry so that the two descriptions never drift apart. Both are stored: each line of
+      <code>weights.txt</code> is <code>ChipID</code>, five neuron offsets, six synapse weights,
+      <code>aR[0..2]</code> and <code>aT[0..2]</code> &mdash; eighteen columns.
+    </li>
+  </ol>
+
+  <div class="note">
+    <span class="tag">Why this matters</span>
+    <p>
+      Because the mapping is exact and bidirectional, the learned object is a rigid-body alignment
+      by construction and not merely something that resembles one. A per-sensor affine correction
+      left unconstrained would have nine free parameters and could absorb shear and scale that no
+      physical mounting can produce; here it has six, of which four are released. The network is
+      the numerical vehicle, the geometry is the model.
+    </p>
+  </div>
+
+  <p>
+    <code>NetworkParameters/weights.txt</code> in the repository is the deployed parameter set;
+    <code>weights_np.txt</code> is the same file reduced by <code>howto.txt</code> to its first
+    twelve columns, that is, the network description without the geometric one.
+  </p>
+</section>
+
+<!-- ==================== 09 ==================== -->
+<section id="outputs">
+  <h2><span class="stage">Section 09</span>Outputs and monitoring</h2>
+
+  <p>
+    Every step leaves a self-contained directory. The layout below is what
+    <code>run_train_circle.C</code> assembles before renaming
+    <code>MLPTrain</code> to <code>MLPTrain_Step&lt;s&gt;</code>.
+  </p>
+
+<pre class="tree"><b>MLPTrain_Step&lt;s&gt;/</b>
+├── <b>weights/</b>
+│   ├── weights.txt                  <i>final: 18 columns per ChipID</i>
+│   ├── weightsDU.txt                <i>detector-unit hierarchy</i>
+│   ├── weights_Epoch_At_&lt;e&gt;.txt     <i>snapshot per epoch, e = -1 … 4</i>
+│   └── weightsDU_Epoch_At_&lt;e&gt;.txt
+├── UpdateSensorsList.txt            <i>ChipID, nTracks, status</i>
+├── <b>Residual/</b>
+│   ├── Residual_Epoch_At_&lt;e&gt;.root   <i>Layer/Stave directory tree of residual histograms</i>
+│   └── Residual_Monitor_Epoch_At_&lt;e&gt;.root  <i>per-track ntuple: residuals, χ, curvature, DCA, vertex</i>
+├── <b>Cost_Gradient/</b>
+│   └── CostGradient_Epoch_At_&lt;e&gt;.txt  <i>per-sensor gradient and track count</i>
+├── <b>LossCurve/</b>
+│   └── LossCurve.gif                <i>training and test loss against epoch</i>
+├── <b>Track_Monitor/</b>              <i>TracksBySensor, TracksBySensor1D, TracksByHalfStave1D per layer</i>
+├── <b>TrendingNetwork/</b>            <i>checkCostGradients.C, checkWeightGradients_extended.C</i>
+└── train_done.log                   <i>full stdout of the step</i>
+</pre>
+
+  <h3>What each artifact answers</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Artifact</th><th>Question it answers</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">LossCurve.gif</td><td>Did the step improve, and did training and test move together? Divergence between the two curves is the first sign of over-fitting to a sensor subset.</td></tr>
+        <tr><td class="mono">Residual_Epoch_At_&lt;e&gt;.root</td><td>Where is the remaining misalignment? Residuals are binned by layer, by half-barrel and half-stave, against z and against &phi;, and as profiles &mdash; the shape of a residual against z is what distinguishes a translation from a rotation.</td></tr>
+        <tr><td class="mono">CostGradient_Epoch_At_&lt;e&gt;.txt</td><td>Which sensors are still driving the update, and which have stalled? Also the source of the per-sensor track counts.</td></tr>
+        <tr><td class="mono">UpdateSensorsList.txt</td><td>Which sensors were under correction, with what statistics.</td></tr>
+        <tr><td class="mono">TracksByHalfStave1D_Layer&lt;l&gt;.gif</td><td>Is the occupancy uniform enough for the correction to be meaningful at that granularity?</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Offline analysis</h3>
+  <p>
+    <code>monitor/analysis.sh</code> launches five ROOT jobs in parallel against
+    <code>Residual_Monitor_Epoch_At_-1.root</code>:
+  </p>
+  <ul>
+    <li><strong>CheckQuality</strong> &mdash; curvature against charge and pT in two dimensions and
+      per &phi; patch, the total <code>&chi;&#178;</code> distribution, and the charge-symmetry
+      monitor.</li>
+    <li><strong>ImpactParams</strong> &mdash; impact-parameter and vertex distributions.</li>
+    <li><strong>Residual</strong> &mdash; residuals by layer, repeated at pT thresholds of 0, 0.3,
+      0.5, 1.0 and 2.0&nbsp;GeV/c, since a residual that only closes at high pT indicates a
+      scattering-dominated rather than geometric effect.</li>
+    <li><strong>Residual2D</strong> and <strong>Profile</strong> &mdash; two-dimensional residual
+      maps and their profiles.</li>
+  </ul>
+
+  <p>
+    Separately, <code>YAlignment::ReconstructGeometries(res_level)</code> samples each sensor's
+    active area on a <code>2<sup>res_level</sup> &times; 2<sup>res_level+1</sup></code> grid and
+    writes three geometries &mdash; ideal, target and corrected &mdash; into
+    <code>Geom/XXXXGeom.root</code> as <code>TNtuple</code>s indexed by the full addressing chain.
+    This is the direct route to a sensor-by-sensor displacement map.
+  </p>
+</section>
+
+<!-- ==================== 10 ==================== -->
+<section id="chaining">
+  <h2><span class="stage">Section 10</span>Step chaining</h2>
+
+  <p>
+    A campaign converges across steps. Three files carry state forward; everything else is
+    regenerated.
+  </p>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 980 300" role="img" aria-label="Three consecutive steps. Each passes its weights file, detector-unit weights file and update-sensor list to the next. The learning rate resets each step while the line-search factor tau anneals, and each step is archived as its own tarball.">
+        <defs>
+          <marker id="f5a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-acc" points="0,0 10,4 0,8" />
+          </marker>
+        </defs>
+
+        <rect class="d-ext" x="30" y="82" width="230" height="104" rx="2" />
+        <text class="d-t b" x="52" y="112">Step s &minus; 1</text>
+        <text class="d-m" x="52" y="134">5 epochs</text>
+        <text class="d-m" x="52" y="152">&eta; = 5 &times; 10&#8315;&#185;&#185;</text>
+        <text class="d-m" x="52" y="170">&tau; = 100 e&#8315;&#8304;&#903;&#185;&#8317;&#738;&#8315;&#185;&#8318;</text>
+
+        <rect class="d-acc" x="375" y="82" width="230" height="104" rx="2" />
+        <text class="d-t b" x="397" y="112">Step s</text>
+        <text class="d-m" x="397" y="134">5 epochs</text>
+        <text class="d-m" x="397" y="152">&eta; reset to nominal</text>
+        <text class="d-m" x="397" y="170">&tau; = 100 e&#8315;&#8304;&#903;&#185;&#738;</text>
+
+        <rect class="d-ext" x="720" y="82" width="230" height="104" rx="2" />
+        <text class="d-t b" x="742" y="112">Step s + 1</text>
+        <text class="d-m" x="742" y="134">5 epochs</text>
+        <text class="d-m" x="742" y="152">&eta; reset to nominal</text>
+        <text class="d-m" x="742" y="170">&tau; = 100 e&#8315;&#8304;&#903;&#185;&#8317;&#738;&#8314;&#185;&#8318;</text>
+
+        <path class="d-la" d="M262,134 H367" marker-end="url(#f5a)" />
+        <path class="d-la" d="M607,134 H712" marker-end="url(#f5a)" />
+
+        <text class="d-at" x="314" y="70" text-anchor="middle">weights.txt</text>
+        <text class="d-at" x="314" y="200" text-anchor="middle">weightsDU.txt</text>
+        <text class="d-at" x="314" y="218" text-anchor="middle">UpdateSensorsList.txt</text>
+
+        <text class="d-at" x="659" y="70" text-anchor="middle">weights.txt</text>
+        <text class="d-at" x="659" y="200" text-anchor="middle">weightsDU.txt</text>
+        <text class="d-at" x="659" y="218" text-anchor="middle">UpdateSensorsList.txt</text>
+
+        <line class="d-tick" x1="30" y1="252" x2="950" y2="252" />
+        <text class="d-m" x="30" y="274">Regenerated every step: XXXXtrain.root, all residual and gradient dumps, the loss curve, the track monitors.</text>
+        <text class="d-m" x="30" y="292">Archived every step: MLPTrain_Step&lt;s&gt;.tgz &mdash; a step is fully reproducible from its own tarball plus the input tree.</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Figure 5</b> What survives a step boundary. Note that the training data are re-prepared
+      from scratch each step, so a campaign can be extended with more statistics simply by
+      changing <code>nDATA</code> between steps; only the model state is inherited.
+    </figcaption>
+  </figure>
+
+  <p>
+    Step 0 is the exception: <code>fPrevWeights</code> is empty, so the networks are randomized by
+    <code>Init_Randomize</code> and its sensor-level counterparts, and no update-sensor list is
+    inherited. From step 1 onward the three files above are loaded before the epoch
+    <code>&minus;1</code> baseline is evaluated, which is why that baseline is directly comparable
+    to the previous step's final epoch.
+  </p>
+</section>
+
+<!-- ==================== 11 ==================== -->
+<section id="config">
+  <h2><span class="stage">Section 11</span>Configuration reference</h2>
+
+  <p>
+    Almost everything is a compile-time constant, so changing the configuration means recompiling
+    the ROOT macro. The two headers below are the entire control surface.
+  </p>
+
+  <h4>YMLPParallel.h &mdash; job size</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="mono">Constant</th><th class="mono">Value</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">jparallel</td><td class="val">0</td><td>Index of this job's slice of the source tree; entries read are <code>[j&middot;nDATA, (j+1)&middot;nDATA)</code>.</td></tr>
+        <tr><td class="mono">nCORE</td><td class="val">1</td><td>Number of parallel slices in the campaign.</td></tr>
+        <tr><td class="mono">nDATA</td><td class="val">50 000</td><td>Source entries read per step.</td></tr>
+        <tr><td class="mono">nEPOCH</td><td class="val">5</td><td>Epochs per step.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>DetectorConstant.h &mdash; model and selection</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="mono">Constant</th><th class="mono">Value</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">nLAYER / nSensors</td><td class="val">7 / 24 120</td><td>Detector scope; chip boundaries 0, 108, 252, 432, 3120, 6480, 14712, 24120.</td></tr>
+        <tr><td class="mono">FITMODEL</td><td class="val">2</td><td>Circle fit. 1 selects the straight-line model used for field-off data.</td></tr>
+        <tr><td class="mono">DET_MAG</td><td class="val">0.5</td><td>Solenoid field in tesla, used for the pT conversion and the scattering term.</td></tr>
+        <tr><td class="mono">nTrackMax</td><td class="val">6</td><td>Tracks required per event, and the prong count of the vertex constraint.</td></tr>
+        <tr><td class="mono">VERTEXFIT</td><td class="val">kFALSE</td><td>The vertex is not included in the longitudinal <code>z</code>&ndash;<code>&beta;</code> fit.</td></tr>
+        <tr><td class="mono">TrackRejection</td><td class="val">110.0</td><td>Maximum <code>&Sigma;&chi;&#178;</code> for a track to enter the cost.</td></tr>
+        <tr><td class="mono">RANGE_CHI_IB / OB</td><td class="val">100.0 / 100.0</td><td>Per-coordinate <code>|&chi;|</code> ceiling; one violation rejects the track.</td></tr>
+        <tr><td class="mono">Update_pTmin / max</td><td class="val">0.40 / 2.00</td><td>Momentum window in GeV/c.</td></tr>
+        <tr><td class="mono">MONITORONLYUPDATES_MODE</td><td class="val">1</td><td>Update-sensor list is fixed, inherited from the previous step.</td></tr>
+        <tr><td class="mono">Min_Cluster_by_Sensor</td><td class="val">0</td><td>No occupancy threshold applied when a list is generated.</td></tr>
+        <tr><td class="mono">MONITOR_Range IB / OB</td><td class="val">0.2 / 0.2</td><td>Residual histogram range in cm, 400 bins.</td></tr>
+        <tr><td class="mono">MONITORHALFSTAVEUNIT</td><td class="val">defined</td><td>Half-stave-level residual monitoring is compiled in.</td></tr>
+        <tr><td class="mono">MONITORSENSORUNITpT<br>MONITORSENSORUNITprofile</td><td class="val">not defined</td><td>Per-sensor pT&ndash;residual histograms and residual profiles are compiled out. The profiles are required by the offset-tuning method, which is therefore also inactive.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Learning method</h4>
+  <p>
+    <code>run_train_circle.C</code> selects <code>kStochastic</code>. Of the eight methods declared,
+    three are implemented in this version &mdash; <code>kStochastic</code>,
+    <code>kBatch</code> and <code>kSteepestDescent</code> with a line search &mdash; plus the two
+    specialized paths <code>kBatchDetectorUnitUser</code> and <code>kOffsetTuneByMean</code>. The
+    conjugate-gradient and BFGS branches are declared with empty bodies and must not be selected.
+  </p>
+
+  <h4>Offset and slope tuning</h4>
+  <p>
+    <code>kOffsetTuneByMean</code> is a separate refinement pass that shifts each sensor by the
+    mean of its own residual profile rather than by a gradient. It reads seventeen coefficients per
+    chip from <code>OffsetSlopeCorrectionParams.txt</code>. In
+    <code>process_all_train.sh</code> it appears as a commented-out block that would run
+    <code>MLPTrain_Step200/control_all.sh</code> before the campaign; the corresponding directory
+    is not part of the repository, and the pass additionally requires
+    <code>MONITORSENSORUNITprofile</code> to be defined.
+  </p>
+</section>
+
+<!-- ==================== 12 ==================== -->
+<section id="community">
+  <h2><span class="stage">Section 12</span>Notes for alignment groups</h2>
+
+  <p class="lede">
+    For readers who align other trackers: this section places the method against the two families
+    most groups already use, and states plainly which parts are conventional and which are not.
+  </p>
+
+  <h3>What is conventional</h3>
+  <ul>
+    <li>The objective is a track-fit <code>&chi;&#178;</code> with residuals in the sensor plane,
+      normalized by a resolution model that adds intrinsic and multiple-scattering terms in
+      quadrature, with the scattering term scaling as <code>1/(BR)</code>.</li>
+    <li>The alignable object is a rigid body with six degrees of freedom per sensor.</li>
+    <li>A vertex constraint from multi-prong events supplies the information that a track fit alone
+      cannot: without it, coherent radial and longitudinal modes are unconstrained.</li>
+    <li>Outliers are removed by hard cuts on the normalized residual and on the total track
+      <code>&chi;&#178;</code>.</li>
+  </ul>
+
+  <h3>What differs from a Millepede-style global fit</h3>
+  <ul>
+    <li><strong>No global matrix.</strong> Alignment parameters are never assembled into a single
+      linear system. The gradient with respect to each sensor's parameters is accumulated
+      independently and applied immediately, so the memory footprint is
+      <code>O(N<sub>sensor</sub>)</code> rather than <code>O((6N<sub>sensor</sub>)&#178;)</code>.
+      For 24&thinsp;120 sensors that is the difference between a few megabytes and a dense matrix of
+      order 10<sup>10</sup> elements. The price is that inter-sensor correlations are not solved
+      in one shot; they are recovered by iterating steps.</li>
+    <li><strong>Iteration replaces inversion.</strong> Convergence is empirical and is monitored
+      through the loss curve and the residual distributions, not certified by a covariance matrix.
+      The module produces no parameter uncertainties; a Millepede solution does.</li>
+    <li><strong>Weak modes are attacked by penalty rather than by constraint equations.</strong>
+      The charge&ndash;momentum asymmetry term per &phi; sector penalizes a sagitta-like distortion
+      directly in the cost. There is no explicit set of linear constraints fixing the global frame;
+      the reference-sensor mechanism (<code>SetSplitReferenceSensor</code>) exists but is disabled,
+      and the global frame is instead held by the vertex constraint and by the frozen
+      out-of-plane rotations.</li>
+    <li><strong>Robustness by rejection rather than by down-weighting.</strong> There is no
+      M-estimator; a track either enters the cost in full or not at all. This is simple and fast
+      but discards information at the edges of the residual distribution.</li>
+  </ul>
+
+  <h3>What differs from a local iterative alignment</h3>
+  <p>
+    A local method aligns one sensor at a time against tracks fitted from the others, and must be
+    iterated to propagate information. Here all 24&thinsp;120 sensors are updated in the same pass
+    from the same track fits, so information propagates across the detector within a single epoch.
+    The construction is closer to a simultaneous gradient descent on the full parameter vector than
+    to a sequence of local solves &mdash; the network formalism is what makes the bookkeeping of
+    that gradient tractable.
+  </p>
+
+  <h3>Transferable pieces</h3>
+  <ul>
+    <li>The <strong>analytic weight-to-geometry Jacobian</strong> is the reusable core. Any
+      alignment expressed as a per-sensor affine map can be constrained to rigid-body motion the
+      same way, with the same guarantee that the fitted object stays physical.</li>
+    <li>The <strong>charge&ndash;momentum symmetry penalty</strong> is detector-independent and cheap:
+      it needs only the track charge, its pT and its azimuth.</li>
+    <li>The <strong>learning-rate backtracking guard</strong> &mdash; revert, divide the step by
+      &radic;10, retry, abandon after four attempts &mdash; is a compact substitute for a full line
+      search when the cost evaluation is expensive.</li>
+    <li>The <strong>step archive convention</strong>, in which each iteration is a self-contained
+      tarball with its own weights, residuals and gradients, makes a campaign auditable after the
+      fact rather than only while it runs.</li>
+  </ul>
+
+  <h3>Honest limitations of the present version</h3>
+  <ul>
+    <li>Two of six degrees of freedom per sensor are frozen; out-of-plane rotations are not
+      determined.</li>
+    <li>The detector-unit hierarchy that would enable a coarse-to-fine schedule is built but not
+      enabled.</li>
+    <li>No parameter uncertainties or correlations are produced.</li>
+    <li>The 20&nbsp;% of events outside both the training and test masks are simply unused; there is
+      no third, independent validation pass inside the job.</li>
+    <li>Configuration lives in preprocessor defines, so a scan over cut values requires
+      recompilation and cannot be varied within a campaign.</li>
+  </ul>
+</section>
+
+<footer>
+  <p>
+    Prepared from the source at the current revision of the ALICE-ITS2-Alignment-2024 repository.
+    Every value quoted &mdash; cut thresholds, learning rate, file formats, active and inactive code
+    paths &mdash; was read from the committed sources and headers rather than from prior
+    documentation, and statements about what is enabled describe the committed configuration tag
+    <code>train20220419&thinsp;/&thinsp;Patch4_rejectBadTracks1</code>. Module author: J.&thinsp;H.&thinsp;Kim, Yonsei University.
+  </p>
+</footer>
+
+  </main>
+</div>
+</div>
