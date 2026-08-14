@@ -1,0 +1,7 @@
+TFile fin("Residual_Monitor_Epoch_At_-1.root","read");
+gROOT->ProcessLine(".L macro.C");
+macro_plot_residuals_by_layer(0.1,0.1,0.1,0.1,"",0.);
+macro_plot_residuals_by_layer(0.1,0.1,0.1,0.1,"",0.3);
+macro_plot_residuals_by_layer(0.1,0.1,0.1,0.1,"",0.5);
+macro_plot_residuals_by_layer(0.1,0.1,0.1,0.1,"",1.0);
+macro_plot_residuals_by_layer(0.1,0.1,0.1,0.1,"",2.0);

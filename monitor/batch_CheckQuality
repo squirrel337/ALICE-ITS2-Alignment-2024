@@ -1,0 +1,10 @@
+gROOT->ProcessLine(".L CheckQuality.C");
+load();
+plot_CurvChargepT2D("box");
+gROOT->ProcessLine(Form("canvas->SaveAs(\"Plot_cuvR_with_charge_pT2D.gif\",\"gif\")"));
+plot_CurvChargepT_by_pstv(0);
+gROOT->ProcessLine(Form("canvas->SaveAs(\"Plot_cuvR_with_charge_pT_by_pstv.gif\",\"gif\")"));
+plot_TotalChi2();
+gROOT->ProcessLine(Form("canvas->SaveAs(\"Plot_Total_Chi2.gif\",\"gif\")"));
+plot_pT_with_charge();
+gROOT->ProcessLine(Form("canvas->SaveAs(\"Plot_monitor_charge_sym.gif\",\"gif\")"));
