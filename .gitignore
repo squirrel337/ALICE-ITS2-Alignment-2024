@@ -40,3 +40,18 @@ weightsDU_Epoch_At_*.txt
 
 # TrendingNetwork.tgz is tracked; the directory extracted from it at run time is not
 TrendingNetwork/
+
+# ACLiC build products and the MakeProject-generated AlignParam library, both
+# regenerable: tools/make_alignlib.C and root -l 'tools/*.C+'
+tools/AlignLib/
+tools/*_C.so
+tools/*_C.d
+tools/*_C_ACLiC_dict_rdict.pcm
+
+# Stray MakeProject output if a macro is run from the repository root
+/AlignLib/
+
+# Generated geometry cache. Regenerable in seconds from the committed geometry and
+# alignment files, and NOT yet validated against O2 — see tools/export_geometry_cache.C.
+# Commit a cache only once level 1-2 validation has passed on an O2 machine.
+geometry/
