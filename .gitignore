@@ -61,3 +61,12 @@ Ymlp/src/*_cxx.so
 Ymlp/src/*_cxx.d
 Ymlp/src/*_cxx_ACLiC_dict_rdict.pcm
 Ymlp/src/*_ACLiC_dict*
+
+# Run outputs
+MLPTrain*/
+
+# Job outputs written into the working directory
+/smoke*.log
+/train.log
+/Residual_Epoch_At_*.root
+/Residual_Monitor_Epoch_At_*.root
