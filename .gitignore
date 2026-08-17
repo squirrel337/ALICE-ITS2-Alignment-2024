@@ -67,6 +67,7 @@ MLPTrain*/
 
 # Job outputs written into the working directory
 /smoke*.log
+/full.log
 /train.log
 /Residual_Epoch_At_*.root
 /Residual_Monitor_Epoch_At_*.root
