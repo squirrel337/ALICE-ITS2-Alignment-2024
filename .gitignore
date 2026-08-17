@@ -70,3 +70,4 @@ MLPTrain*/
 /train.log
 /Residual_Epoch_At_*.root
 /Residual_Monitor_Epoch_At_*.root
+/MLPTrain_Step900/
