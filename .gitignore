@@ -1,0 +1,42 @@
+# Per-run artifacts of the alignment module.
+# Every entry here is produced by a training run, not authored — see the file or
+# script named alongside it. Committed inputs (o2sim_geometry.root,
+# ITSAlignment.root, NetworkParameters/, UpdateSensorsList.txt, TrendingNetwork.tgz,
+# YMLPBeamProfile.h, batch_train, profile_beam.log) are deliberately not listed.
+
+# Training input, supplied per campaign and often a symlink to data kept outside
+# the repository. YAlignment::SetSourceDataName in run_train_circle.C
+XXXXinput.root
+
+# Intermediate and analysis trees. YAlignment::PrepareData / AnalyzeMLP /
+# ReconstructGeometries
+XXXXtrain.root
+XXXXanalyse.root
+XXXXGeom.root
+Geom/
+
+# Step directories and their archives. run_train_circle.C renames MLPTrain to
+# MLPTrain_Step<N>; process_all_train.sh tars it
+MLPTrain/
+MLPTrain_Step*/
+MLPTrain_Step*.tgz
+
+# Job log. process.sh redirects stdout here, process_all_train.sh renames it
+train.log
+
+# Monitoring dumps. YMultiLayerPerceptron::DumpResiduals / DumpCostGradients
+Residual_Epoch_At_*.root
+Residual_Monitor_Epoch_At_*.root
+CostGradient_Epoch_At_*.txt
+NTracksBySensor_Epoch*.txt
+
+# Per-epoch weight snapshots written to the working directory before being moved
+# into MLPTrain/weights/. YMultiLayerPerceptron::DumpWeights
+weights_Epoch_At_*.txt
+weightsDU_Epoch_At_*.txt
+
+# Plots. Loss curve, per-sensor and per-half-stave track monitors, residual means
+*.gif
+
+# TrendingNetwork.tgz is tracked; the directory extracted from it at run time is not
+TrendingNetwork/
