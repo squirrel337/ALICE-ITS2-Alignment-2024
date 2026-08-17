@@ -12087,7 +12087,7 @@ void YMultiLayerPerceptron::MLP_OffsetTuneByMean()
       matD2[2] = {0};  
 
       double Rxx, Rxy, Rxz, Tdx, Ryx, Ryy, Ryz, Tdy, Rzx, Rzy, Rzz, Tdz;
-      yGEOM->GetGeom()->getMatrixL2G(iID).GetComponents(Rxx, Rxy, Rxz, Tdx, Ryx, Ryy, Ryz, Tdy, Rzx, Rzy, Rzz, Tdz);
+      yGEOM->GetL2GComponents(iID, Rxx, Rxy, Rxz, Tdx, Ryx, Ryy, Ryz, Tdy, Rzx, Rzy, Rzz, Tdz);
 
       TMatrixD matRgeom(3,3);
       matRgeom[0] = {Rxx, Rxy, Rxz};
@@ -12348,7 +12348,7 @@ void YMultiLayerPerceptron::CalculateSCWeights(int sensorID, YSensorCorrection* 
       NetworkParameters[0][10] = wSynapse[5];
                     
       double Rxx, Rxy, Rxz, Tdx, Ryx, Ryy, Ryz, Tdy, Rzx, Rzy, Rzz, Tdz;
-      yGEOM->GetGeom()->getMatrixL2G(sensorID).GetComponents(Rxx, Rxy, Rxz, Tdx, Ryx, Ryy, Ryz, Tdy, Rzx, Rzy, Rzz, Tdz);
+      yGEOM->GetL2GComponents(sensorID, Rxx, Rxy, Rxz, Tdx, Ryx, Ryy, Ryz, Tdy, Rzx, Rzy, Rzz, Tdz);
 
       TMatrixD matRgeom(3,3);
       matRgeom[0] = {Rxx, Rxy, Rxz};

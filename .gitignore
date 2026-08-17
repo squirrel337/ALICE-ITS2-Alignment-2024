@@ -55,3 +55,9 @@ tools/*_C_ACLiC_dict_rdict.pcm
 # alignment files, and NOT yet validated against O2 — see tools/export_geometry_cache.C.
 # Commit a cache only once level 1-2 validation has passed on an O2 machine.
 geometry/
+
+# ACLiC products next to the sources
+Ymlp/src/*_cxx.so
+Ymlp/src/*_cxx.d
+Ymlp/src/*_cxx_ACLiC_dict_rdict.pcm
+Ymlp/src/*_ACLiC_dict*
