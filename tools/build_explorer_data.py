@@ -256,6 +256,15 @@ def main():
             pass
         return default
 
+    def monitor_set(nepoch):
+        try:
+            n = int(nepoch)
+        except (TypeError, ValueError):
+            return "unknown (could not read nEPOCH)"
+        return ("training; at nEPOCH = 0 Train() returns before the test pass runs"
+                if n == 0 else
+                "test (holdout); the training pass is overwritten in the same file")
+
     prov = {
         "input":     os.path.basename(os.path.realpath("XXXXinput.root")) if os.path.exists("XXXXinput.root") else "?",
         "seed":      os.path.dirname(os.path.dirname(WSTEP)) or "?",
@@ -266,13 +275,16 @@ def main():
         "nDATA":     grep_define("YMLPParallel.h", "nDATA"),
         "epoch":     argsel["epoch"] if argsel["epoch"] is not None else "-1",
         "monitor":   RESMON,
-        # GetCost(EDataSet) opens the monitor file "recreate" and Train() calls it once
-        # for the training set and then once for the test set, so the second call
-        # truncates the first. Verified on a live job: the file reached 16.9 MB during
-        # the training pass and dropped to 0 when the test pass reopened it. What
-        # survives on disk is the test pass, and every residual and DCA number in this
-        # payload comes from it.
-        "monitorSet": "test (holdout); the training pass is overwritten in the same file",
+        # Which pass survives in the monitor file depends on nEPOCH, so it is derived
+        # rather than assumed. GetCost(EDataSet) opens the file "recreate", and Train()
+        # runs the training pass, then hits `if(nEpoch==0) return;`
+        # (YMultiLayerPerceptron.cxx:1279), then the test pass. At nEPOCH = 0 the
+        # function returns before the test pass ever runs, so the training pass is what
+        # is on disk. Above zero the test pass reopens the file and truncates it.
+        # Both readings check out against the pT-window acceptance, which is ~36% in
+        # every run: 434569/1183248 training at nEPOCH 0, and 11497/31488 and 1459/4080
+        # test at nEPOCH 5.
+        "monitorSet": monitor_set(grep_define("YMLPParallel.h", "nEPOCH")),
         "built":     __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
 

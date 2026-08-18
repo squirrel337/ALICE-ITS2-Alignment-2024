@@ -212,8 +212,8 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
 <section id="resid">
   <h2><span class="n">Panel 04</span>Residual exploration</h2>
   <p class="lede">The sensor-frame residuals, binned against four abscissae. The p<sub>T</sub>
-  threshold drives every plot at once. These are the <strong>held-out</strong> tracks, not
-  the training sample &mdash; see panel 06.</p>
+  threshold drives every plot at once. Which sample these tracks come from depends on the
+  run &mdash; the configuration table names it &mdash; and panel 06 says why.</p>
   <div class="ctl">
     <span><label>Coordinate</label><span class="seg" id="resCoord">
       <button data-v="ds1" aria-pressed="true">&Delta;s1</button><button data-v="ds2">&Delta;s2</button></span></span>
@@ -296,14 +296,21 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     from O2 source, and they decide which tracks enter the cost at all.</p>
     <p>The seed weights are from step 900, dated 2022, while the data is run 539884 from 2023.
     Some of what appears here as misalignment may simply be that gap.</p>
-    <p><strong>These are test-set tracks.</strong> <code>GetCost</code> opens
-    <code>Residual_Monitor_Epoch_At_N.root</code> with <code>recreate</code>, and each epoch
-    calls it once for the training set and then once for the test set, so the second call
-    truncates the first. Watching a live job, the file reached 16.9&nbsp;MB during the
-    training pass and dropped to zero the moment the test pass reopened it. Every residual
-    and impact-parameter number on this page therefore comes from the held-out sample,
-    which is the right sample to judge alignment on, but it is not the sample the cost was
-    minimized over and the two need not agree.</p>
+    <p><strong>The monitor file keeps one pass, and which one depends on
+    <code>nEPOCH</code>.</strong> <code>GetCost</code> opens
+    <code>Residual_Monitor_Epoch_At_N.root</code> with <code>recreate</code>, so each call
+    truncates whatever the previous call wrote &mdash; watching a live job, the file
+    reached 16.9&nbsp;MB across the training pass and dropped to zero the moment the test
+    pass reopened it. But <code>Train()</code> hits
+    <code>if(nEpoch==0) return;</code> <em>between</em> the two passes
+    (<code>YMultiLayerPerceptron.cxx:1279</code>). At <code>nEPOCH = 0</code> the test pass
+    therefore never runs and the file holds the <strong>training</strong> sample; above
+    zero it holds the <strong>held-out</strong> one. The run-configuration table names
+    which applies to the loaded payload. The p<sub>T</sub> window keeps about 36&nbsp;% of
+    tracks either way, and that ratio against the right denominator is what identifies the
+    sample: 434,569 of 1,183,248 training tracks in the bundled
+    <code>nEPOCH = 0</code> run, against 11,497 of 31,488 test tracks in an
+    <code>nEPOCH = 5</code> run of the same code.</p>
     <p>Panel 05 shows a d<sub>0</sub>(z) distribution that is bimodal &mdash; a core of a few
     hundred &micro;m carrying about half the tracks, and a nearly flat pedestal out to
     &plusmn;6&nbsp;cm carrying the rest &mdash; while d<sub>0</sub>(r&phi;) from the same
