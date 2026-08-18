@@ -4369,7 +4369,11 @@ Double_t YMultiLayerPerceptron::GetCost_Beam_CircleFit(int track) //const
    CircleXc = CircleXc + BeamCenter(0) + Fitpar[2];
    CircleYc = CircleYc + BeamCenter(1) + Fitpar[3];
 
-   double RecMomentumT = 0.3*DET_MAG*RecRadius*1.0e-2;  //r[m] -> r[cm]
+   double RecMomentumT = 0.3*std::abs(DET_MAG)*RecRadius*1.0e-2;  //r[m] -> r[cm]
+   // Magnitude, not the signed field. DET_MAG carries the solenoid polarity for the
+   // impact-parameter curvature term; pT is positive by construction, and the window
+   // cut just below is [Update_pTmin, Update_pTmax] = [0.40, 2.00], so a signed pT
+   // would reject every track.
    //std::cout<<" pT(GeV) "<<RecMomentumT;
    //std::cout<<" Chip ";
    for(int ln = 0; ln<nLAYER; ln++){             
@@ -5126,7 +5130,11 @@ void YMultiLayerPerceptron::CalculateEventDcdw(int ntracks)
       CircleXc = CircleXc + BeamCenter(0) + Fitpar[2];
       CircleYc = CircleYc + BeamCenter(1) + Fitpar[3];
    
-      double RecMomentumT = 0.3*DET_MAG*RecRadius*1.0e-2;  //r[m] -> r[cm]
+      double RecMomentumT = 0.3*std::abs(DET_MAG)*RecRadius*1.0e-2;  //r[m] -> r[cm]
+   // Magnitude, not the signed field. DET_MAG carries the solenoid polarity for the
+   // impact-parameter curvature term; pT is positive by construction, and the window
+   // cut just below is [Update_pTmin, Update_pTmax] = [0.40, 2.00], so a signed pT
+   // would reject every track.
       if(RecMomentumT<Update_pTmin || RecMomentumT>Update_pTmax) {
          //std::cout<<"(Neuron) momentum range cut"<<std::endl;
          for(int ln = 0; ln<nLAYER; ln++){         
