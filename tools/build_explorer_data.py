@@ -153,9 +153,33 @@ def main():
         if m:
             run |= {"trainTracks": int(m.group(1)), "testTracks": int(m.group(2))}
 
+    # Provenance travels with the payload. The page reads its configuration table from
+    # here rather than hard-coding it, so a swapped dataset cannot be described by the
+    # previous run's settings.
+    def grep_define(path, name, default="?"):
+        try:
+            for ln in open(path):
+                m = re.match(r"\s*#define\s+" + name + r"\s+(\S+)", ln)
+                if m:
+                    return m.group(1)
+        except OSError:
+            pass
+        return default
+
+    prov = {
+        "input":     os.path.basename(os.path.realpath("XXXXinput.root")) if os.path.exists("XXXXinput.root") else "?",
+        "seed":      os.path.dirname(os.path.dirname(WSTEP)) or "?",
+        "weights":   WDEPL,
+        "geometry":  GEOM,
+        "nTrackMax": grep_define("Ymlp/inc/DetectorConstant.h", "nTrackMax"),
+        "nEPOCH":    grep_define("YMLPParallel.h", "nEPOCH"),
+        "nDATA":     grep_define("YMLPParallel.h", "nDATA"),
+        "built":     __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M"),
+    }
+
     os.makedirs("docs", exist_ok=True)
     with open(OUT, "w") as fh:
-        json.dump({"chips": chips, "residuals": res, "run": run,
+        json.dump({"chips": chips, "residuals": res, "run": run, "prov": prov,
                    "chipBoundary": CHIPBND, "nChips": n}, fh, separators=(",", ":"))
     print(f"wrote {OUT}  {os.path.getsize(OUT)/1e6:.2f} MB   chips={n}  tracks={len(pT)}")
 
