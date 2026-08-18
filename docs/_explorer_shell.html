@@ -125,6 +125,7 @@ td.m{font-family:var(--font-mono);font-size:.78rem;font-variant-numeric:tabular-
 .src{display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;background:var(--surface);
   border:1px solid var(--rule-strong);padding:.7rem .9rem;margin:1.4rem 0 0}
 .src.drag{border-color:var(--accent);background:var(--accent-soft)}
+.epnote{font-family:var(--font-mono);font-size:.7rem;color:var(--ink-3)}
 .src .who{font-family:var(--font-mono);font-size:.75rem;color:var(--ink);flex:1 1 260px;
   overflow-wrap:anywhere;line-height:1.5}
 .src .who b{color:var(--accent);font-weight:400}
@@ -155,6 +156,10 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
   <button id="srcReset" type="button">Reset to bundled run</button>
   <span class="err" id="srcErr" hidden></span>
 </div>
+<div class="ctl" id="epochBar" hidden>
+  <span><label>Epoch</label><span class="seg" id="epochSel"></span></span>
+  <span class="epnote" id="epochNote"></span>
+</div>
 <p style="font-size:.83rem;color:var(--ink-3);max-width:70ch;margin:.5rem 0 0">
   Drop or open any <code>explorer-data.json</code> produced by
   <code>tools/build_explorer_data.py</code> — every panel below redraws from it. Nothing
@@ -162,9 +167,19 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
 
 <section id="cost">
   <h2><span class="n">Panel 01</span>Cost monitoring</h2>
-  <p class="lede">The epoch &minus;1 baseline: a full cost evaluation with no weight update,
-  so these numbers are a pure function of the input sample and the geometry.</p>
+  <p class="lede">The tiles describe the epoch the payload was extracted at. When a run
+  carries more than one epoch, the curve below tracks the whole trajectory &mdash; epoch
+  &minus;1 is the seed evaluated with no weight update, so it is a pure function of the
+  input sample and the geometry, and the line every later epoch has to beat.</p>
   <div class="tiles" id="tiles"></div>
+  <figure id="trendFig" hidden><div class="frame"><svg id="costTrend" viewBox="0 0 1180 300" role="img"
+    aria-label="Total cost against epoch for the training and test samples."></svg></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>training</span
+      ><span><i style="background:var(--signal)"></i>test</span
+      ><span><i style="background:var(--rule-strong)"></i>epoch &minus;1 baseline</span></div>
+    <figcaption><b>Figure 0</b> Total cost per epoch, both samples, on a shared scale.
+    Epoch &minus;1 is the seed evaluated without any weight update, so it is the line the
+    rest have to beat. Hover a point for its fit and charge-symmetry split.</figcaption></figure>
   <div class="tw"><table id="runcfg"><thead><tr><th>Setting</th><th>Value</th><th>Note</th></tr></thead><tbody></tbody></table></div>
 </section>
 
@@ -397,6 +412,7 @@ function drawCost(){
      can fill the column from its own data; the page will not fill it. */
   const rows = [
     ["nTrackMax", P.nTrackMax ?? "?", ""],
+    ["DET_MAG", P.DET_MAG ?? "?", ""],
     ["nEPOCH", P.nEPOCH ?? "?", ""],
     ["epoch shown", P.epoch ?? "?", ""],
     ["monitor set", P.monitorSet ?? "?", ""],
@@ -404,6 +420,7 @@ function drawCost(){
     ["input", P.input ?? "?", ""],
     ["seed", P.seed ?? "?", ""],
     ["geometry", P.geometry ?? "?", ""],
+    ["run dir", P.runRoot ?? "?", ""],
     ["built", P.built ?? "?", ""]];
   document.querySelector("#runcfg tbody").innerHTML = rows.map(r =>
     `<tr><td>${r[0]}</td><td class="m">${r[1]}</td><td>${r[2]}</td></tr>`).join("");
@@ -555,15 +572,87 @@ function drawWeak(){
   });
   lineChart("weakZ", rad, "z (cm)", "radial T (µm)", [-75,75]);
 }
+/* ---------- epoch selection ----------
+   A payload may carry several epochs. The one it was extracted at keeps the full
+   five-pT-cut detail; the others are reduced at pT >= 0 only, because six epochs of the
+   full detail would not fit in a page. So the pT control is disabled while a
+   reduced epoch is selected rather than silently showing cut 0 under a label that says
+   otherwise. */
+let epochSel = null;                       // null = the payload's own epoch
+function epochList(){ return Object.keys(D.epochs || {}).sort((a,b)=>(+a)-(+b)); }
+function primaryEpoch(){ return (D.prov && D.prov.epoch != null) ? String(D.prov.epoch) : null; }
+function isPrimary(){ return epochSel === null || epochSel === primaryEpoch(); }
+function activeRes(){ return isPrimary() ? R : (D.epochs[epochSel] || {}).residuals || R; }
+function activeDca(){ return isPrimary() ? D.dca : (D.epochs[epochSel] || {}).dca || D.dca; }
+
+function buildEpochBar(){
+  const eps = epochList(), bar = document.getElementById("epochBar");
+  if(eps.length < 2){ bar.hidden = true; epochSel = null; return; }
+  bar.hidden = false;
+  const prim = primaryEpoch();
+  document.getElementById("epochSel").innerHTML = eps.map(e =>
+    `<button data-v="${e}"${(epochSel ?? prim) === e ? ' aria-pressed="true"' : ""}>${e}</button>`).join("");
+  syncEpochNote();
+}
+function syncEpochNote(){
+  const prim = primaryEpoch();
+  document.getElementById("epochNote").textContent = isPrimary()
+    ? `epoch ${prim ?? "?"} · full detail, all p_T cuts`
+    : `epoch ${epochSel} · reduced: p_T ≥ 0 only`;
+  const slider = document.getElementById("resPt"), dslider = document.getElementById("dcaPt");
+  [slider, dslider].forEach(el => { el.disabled = !isPrimary(); el.style.opacity = isPrimary() ? "" : ".4"; });
+  if(!isPrimary()){
+    resState.pt = 0; dcaState.pt = 0; slider.value = 0; dslider.value = 0;
+    document.getElementById("resPtV").textContent = "0 GeV/c";
+    document.getElementById("dcaPtV").textContent = "0 GeV/c";
+  }
+}
+
+/* ---------- Panel 1b : cost against epoch ---------- */
+function drawTrend(){
+  const CS = D.costSeries || {}, eps = Object.keys(CS).sort((a,b)=>(+a)-(+b));
+  const fig = document.getElementById("trendFig");
+  if(eps.length < 2){ fig.hidden = true; return; }
+  fig.hidden = false;
+  const W=1180,H=300,p={l:78,r:20,t:18,b:46};
+  const series = [["training","var(--accent)"],["test","var(--signal)"]].map(([k,col])=>({
+    k, col, pts: eps.map((e,i)=>[i, CS[e][k] ? CS[e][k].total : null]).filter(q=>q[1]!=null)}));
+  let ymin=Infinity,ymax=-Infinity;
+  series.forEach(s=>s.pts.forEach(([,y])=>{ if(y<ymin)ymin=y; if(y>ymax)ymax=y; }));
+  if(!isFinite(ymin)){ fig.hidden = true; return; }
+  const pad=(ymax-ymin)*0.18||0.01; ymin-=pad; ymax+=pad;
+  const X=i=>p.l+(eps.length<2?0:(i/(eps.length-1))*(W-p.l-p.r));
+  const Y=v=>H-p.b-((v-ymin)/(ymax-ymin))*(H-p.t-p.b);
+  let g=`<rect x="${p.l}" y="${p.t}" width="${W-p.l-p.r}" height="${H-p.t-p.b}" fill="none" stroke="var(--rule)"/>`;
+  for(let k=0;k<=4;k++){ const v=ymin+(ymax-ymin)*k/4,y=Y(v);
+    g+=`<line x1="${p.l}" y1="${y.toFixed(1)}" x2="${W-p.r}" y2="${y.toFixed(1)}" stroke="var(--rule)" stroke-dasharray="2 3"/>`
+     +`<text x="${p.l-8}" y="${(y+3.5).toFixed(1)}" text-anchor="end" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${v.toFixed(4)}</text>`;}
+  // the epoch -1 baseline, as a reference line per sample
+  series.forEach(s=>{ const b=CS[eps[0]][s.k]; if(!b) return;
+    g+=`<line x1="${p.l}" y1="${Y(b.total).toFixed(1)}" x2="${W-p.r}" y2="${Y(b.total).toFixed(1)}" stroke="var(--rule-strong)" stroke-dasharray="5 4"/>`;});
+  eps.forEach((e,i)=>{
+    g+=`<text x="${X(i).toFixed(1)}" y="${H-p.b+18}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${e}</text>`;});
+  series.forEach(s=>{
+    if(s.pts.length>1)
+      g+=`<polyline fill="none" stroke="${s.col}" stroke-width="2" points="${s.pts.map(([i,v])=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}"/>`;
+    s.pts.forEach(([i,v])=>{
+      const c=CS[eps[i]][s.k];
+      g+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="4" fill="${s.col}"><title>epoch ${eps[i]} ${s.k}\nfit ${c.fit.toFixed(6)}\nchsym ${c.chsym.toExponential(2)}\ntotal ${v.toFixed(6)}</title></circle>`;});});
+  g+=`<text x="${W/2}" y="${H-8}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11">epoch</text>`
+   +`<text x="18" y="${H/2}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11" transform="rotate(-90 18 ${H/2})">total cost</text>`;
+  document.getElementById("costTrend").innerHTML=g;
+}
+
 /* ---------- Panel 4 : residuals ---------- */
 let resState = { coord:"ds1", axis:"phi", pt:0 };
 const AXLAB = {phi:"φ (rad)", z:"z (cm)", eta:"η", pT:"p_T (GeV/c)"};
 function drawResid(){
+  const RA=activeRes();
   const svg=document.getElementById("resProf"), W=1180,H=380, p={l:64,r:16,t:16,b:44};
   const key=resState.coord+"|"+resState.axis;
   const series=[]; let ymin=Infinity,ymax=-Infinity,xdom=null;
   for(let l=0;l<NL;l++){
-    const pr=R.layers[String(l)].profiles[key][resState.pt]; if(!pr) continue;
+    const pr=RA.layers[String(l)].profiles[key][resState.pt]; if(!pr) continue;
     const e=pr.edges; xdom=[e[0],e[e.length-1]];
     const pts=[];
     for(let b=0;b<pr.mean.length;b++){ const m=pr.mean[b]; if(m==null) continue;
@@ -595,7 +684,7 @@ function drawResid(){
   // histograms
   const hs=document.getElementById("resHist"), HW=1180,HH=320,hp={l:40,r:12,t:14,b:62}, cw=(HW-hp.l-hp.r)/NL;
   let mx=0; const hh=[];
-  for(let l=0;l<NL;l++){ const h=R.layers[String(l)].hists[resState.coord][resState.pt]; hh.push(h);
+  for(let l=0;l<NL;l++){ const h=RA.layers[String(l)].hists[resState.coord][resState.pt]; hh.push(h);
     if(h) h.counts.forEach(c=>{ if(c>mx) mx=c; }); }
   let q="";
   for(let l=0;l<NL;l++){ const h=hh[l]; const x0=hp.l+l*cw;
@@ -613,9 +702,9 @@ function drawResid(){
   hs.innerHTML=q;
 
   document.querySelector("#resTable tbody").innerHTML=[...Array(NL)].map((_,l)=>{
-    const h=R.layers[String(l)].hists[resState.coord][resState.pt];
+    const h=RA.layers[String(l)].hists[resState.coord][resState.pt];
     const tail=h&&h.tail300!=null?h.tail300:null;
-    return `<tr><td class="m">L${l}</td><td class="m">${fmt(R.layers[String(l)].n)}</td>`
+    return `<tr><td class="m">L${l}</td><td class="m">${fmt(RA.layers[String(l)].n)}</td>`
       +`<td class="m">${h&&h.median!=null?h.median.toFixed(2)+" µm":"—"}</td>`
       +`<td class="m">${h&&h.iqr!=null?h.iqr.toFixed(1)+" µm":"—"}</td>`
       +`<td class="m"${tail!=null&&tail>20?' style="color:var(--reject)"':""}>${tail!=null?tail.toFixed(1)+" %":"—"}</td></tr>`;}).join("");
@@ -625,7 +714,7 @@ let dcaState = { coord:"d0xy", axis:"phi", pt:0, stat:"mean" };
 const DAXLAB = {phi:"φ (rad)", eta:"η", pT:"p_T (GeV/c)", vz:"vertex z (cm)"};
 const DCOORDLAB = {d0xy:"d0 rφ (µm)", d0z:"d0 z (µm)"};
 function drawDca(){
-  const K = D.dca;
+  const K = activeDca();
   // The payload predates this panel in earlier runs, so a dataset without a dca block
   // must hide the panel rather than throw and take the rest of the page down with it.
   const sec = document.getElementById("dca");
@@ -683,7 +772,8 @@ document.getElementById("dcaPt").addEventListener("input", e=>{
   document.getElementById("dcaPtV").textContent=(D.dca?.ptCuts||[0])[dcaState.pt]+" GeV/c";
   drawDca();});
 
-function renderAll(){ drawCost(); drawMap(); drawWeak(); drawResid(); drawDca(); describeSource(); }
+function renderAll(){ drawCost(); drawTrend(); drawMap(); drawWeak(); drawResid(); drawDca(); describeSource(); }
+seg("epochSel", v=>{ epochSel = v; syncEpochNote(); drawResid(); drawDca(); });
 seg("resCoord", v=>{resState.coord=v; drawResid();});
 seg("resAxis",  v=>{resState.axis =v; drawResid();});
 document.getElementById("resPt").addEventListener("input", e=>{
@@ -734,6 +824,8 @@ function adopt(obj, label){
   document.getElementById("resPt").max = String((R.ptCuts||[0]).length - 1);
   resState.pt = 0; document.getElementById("resPt").value = 0;
   document.getElementById("resPtV").textContent = (R.ptCuts||[0])[0] + " GeV/c";
+  epochSel = null;
+  buildEpochBar();
   const dcuts = (obj.dca && obj.dca.ptCuts) || [0];
   document.getElementById("dcaPt").max = String(dcuts.length - 1);
   dcaState.pt = 0; document.getElementById("dcaPt").value = 0;
@@ -762,6 +854,7 @@ const bar = document.getElementById("srcBar");
   bar.classList.remove("drag"); }));
 document.addEventListener("drop", e => readFile(e.dataTransfer?.files?.[0]));
 
+buildEpochBar();
 renderAll();
 
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
