@@ -182,30 +182,35 @@ def main():
         res["layers"][str(l)] = entry
 
     # ---- impact parameter (DCA) ------------------------------------------
-    # vdcaX/vdcaY are already expressed relative to the beam center: GetCost builds the
-    # circle in the beam-shifted frame (CircleXf = CircleXc - BeamCenter(0)) before
-    # solving for the closest approach, so no further subtraction belongs here. vdcaZ is
-    # absolute, hence the explicit vtxevtZ subtraction below.
-    dx, dy = br("vdcaX"), br("vdcaY")
+    # fip[0] and fip[1] are the impact parameters proper: YImpactParameter propagates the
+    # helix to the beam in getImpactParams, and the same two numbers feed the selection
+    # cut at YMultiLayerPerceptron.cxx:4656. The vdca* branches are a separate,
+    # circle-geometry estimate and are not what the module calls the DCA.
+    ip = t["monitor/fip[2]"].array(library="np")
+    d0xy = ip[:, 0] * 1e4                                            # cm -> um
+    d0z = ip[:, 1] * 1e4
     trkphi = br("phi")
-    # Signed transverse impact parameter, the component perpendicular to the track
-    # direction. The sign is what makes a charge-dependent bias visible; |d0| folds it
-    # away, which is exactly the asymmetry the cost's charge-symmetry term targets.
-    d0xy = (-dx * np.sin(trkphi) + dy * np.cos(trkphi)) * 1e4        # cm -> um
-    d0z = (br("vdcaZ") - br("vtxevtZ")) * 1e4
     charge = np.sign(br("cuvR"))     # curvature sign stands in for the track charge
     vz = br("vtxevtZ")
 
+    # The track is parametrized from layer 0 (YMultiLayerPerceptron.cxx:4623,
+    # `vxyz = {proj_GXc[0], proj_GYc[0], proj_GZc[0]}`), but proj_G*c is an
+    # uninitialized local that the fill loop at :4465 skips for layers with no hit. When
+    # layer 0 is missing -- 51.6% of tracks in this sample -- vxyz reads slots that were
+    # never written, and ip_z goes from a 29 um median to 16.5 mm. The split is carried
+    # in the payload so the page can separate the two populations instead of averaging a
+    # real measurement together with unwritten memory.
+    hasL0 = cid[:, 0] >= 0
+
     DAX = {"phi": (-np.pi, np.pi, trkphi), "eta": (-1.5, 1.5, eta),
            "pT": (0.4, 2.0, pT), "vz": (-15.0, 15.0, vz)}
-    # d0z is bimodal: a sharp core plus a nearly flat pedestal reaching several cm, so no
-    # single axis shows both. The axis is set to the core and the pedestal is reported as
-    # the dropped fraction, which states its size in one number instead of hiding it.
-    DRNG = {"d0xy": 300.0, "d0z": 500.0}
+    DRNG = {"d0xy": 400.0, "d0z": 400.0}
     dca = {"ptCuts": PT_CUTS, "profiles": {}, "hists": {}, "charge": {},
-           "n": int(d0xy.size)}
+           "n": int(d0xy.size), "nL0": int(hasL0.sum()),
+           "fracL0": round(float(hasL0.mean()), 4), "l0Only": True}
     for ci, cut in enumerate(PT_CUTS):
-        sel = pT >= cut
+        # Layer-0 tracks only. Including the rest would plot uninitialized memory.
+        sel = (pT >= cut) & hasL0
         for cname, dv in (("d0xy", d0xy), ("d0z", d0z)):
             for aname, (lo, hi, av) in DAX.items():
                 dca["profiles"].setdefault(f"{cname}|{aname}", []).append(

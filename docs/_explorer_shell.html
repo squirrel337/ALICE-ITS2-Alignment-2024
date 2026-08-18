@@ -242,7 +242,10 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
   <p class="lede">Distance of closest approach of the fitted helix to the beam, per track.
   This is the one observable on the page that does not come from the sensor frame, so it
   reads the geometry from the other side: a misalignment the residuals absorb into their
-  own fit still has to show up here as a bias in d<sub>0</sub>.</p>
+  own fit still has to show up here as a bias in d<sub>0</sub>. These are the
+  <code>fip</code> branches &mdash; the impact parameters <code>YImpactParameter</code>
+  computes and the selection cut reads &mdash; restricted to tracks with a layer-0 hit.
+  Panel 06 says why both qualifications are load-bearing.</p>
   <div class="ctl">
     <span><label>Coordinate</label><span class="seg" id="dcaCoord">
       <button data-v="d0xy" aria-pressed="true">d<sub>0</sub> (r&phi;)</button
@@ -260,26 +263,26 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     <figure><div class="frame"><svg id="dcaProf" viewBox="0 0 560 300" role="img"
       aria-label="Mean and RMS of the impact parameter against the selected abscissa."></svg></div>
       <figcaption><b>Figure 6</b> One statistic at a time, each on its own scale. The mean
-      is the alignment-sensitive curve and sits near zero; the RMS is an order of magnitude
-      larger and scattering-dominated, so plotting both together flattens the mean into a
-      line. Bins under 50 tracks are left empty.</figcaption></figure>
+      is far smaller than the RMS, so plotting both together flattens the mean into a line.
+      Bins under 50 tracks are left empty. The mean averages over both charges, so the
+      &plusmn;118&nbsp;&micro;m split of figure 7 largely cancels out of it.</figcaption></figure>
     <figure><div class="frame"><svg id="dcaChg" viewBox="0 0 560 300" role="img"
       aria-label="Mean transverse impact parameter against azimuth, split by track charge."></svg></div>
       <div class="legend"><span><i style="background:var(--div-pos)"></i>positive</span
         ><span><i style="background:var(--div-neg)"></i>negative</span></div>
-      <figcaption><b>Figure 7</b> Positive against negative, in &phi;. A split that opens
-      with &phi; is the sagitta signature the cost's charge-symmetry term penalizes.
-      Charge is taken from the sign of the fitted curvature.</figcaption></figure>
+      <figcaption><b>Figure 7</b> Positive against negative, in &phi;. Charge is taken
+      from the sign of the fitted curvature. The &plusmn;118&nbsp;&micro;m offset between
+      the two is <em>not</em> a misalignment result &mdash; see panel 06.</figcaption></figure>
   </div>
   <figure><div class="frame"><svg id="dcaHist" viewBox="0 0 1180 260" role="img"
     aria-label="Impact parameter distribution at the selected transverse-momentum threshold."></svg></div>
     <figcaption><b>Figure 8</b> Distribution at the selected threshold. As in panel 04,
     entries beyond the axis are dropped rather than piled into the end bin, and the
-    dropped fraction is stated on the plot. For d<sub>0</sub>(z) that fraction is about 55&nbsp;%:
-    the distribution is a core a couple of hundred &micro;m wide sitting on a nearly flat
-    pedestal that reaches &plusmn;6&nbsp;cm, and no single axis shows both. The axis is set
-    to the core, so the stated fraction is the size of the pedestal. The transverse component shows nothing of the kind, which is what makes the
-    z one worth looking at &mdash; see panel 06.</figcaption></figure>
+    dropped fraction is stated on the plot. The two humps in d<sub>0</sub>(r&phi;) are not
+    two populations of tracks: they are the positive and negative charges pushed
+    &plusmn;118&nbsp;&micro;m apart by the curvature-sign problem in panel 06.
+    Correcting that sign merges them into a single peak with a 9.5&nbsp;&micro;m median.
+    d<sub>0</sub>(z) carries no such split and is the narrower of the two.</figcaption></figure>
   <div class="tw"><table id="dcaTable"><thead><tr><th>p<sub>T</sub> &ge;</th><th>N</th>
     <th>Median</th><th>IQR</th><th>&lang;d<sub>0</sub>&rang; positive</th>
     <th>&lang;d<sub>0</sub>&rang; negative</th><th>Split</th></tr></thead><tbody></tbody></table></div>
@@ -311,15 +314,38 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     sample: 434,569 of 1,183,248 training tracks in the bundled
     <code>nEPOCH = 0</code> run, against 11,497 of 31,488 test tracks in an
     <code>nEPOCH = 5</code> run of the same code.</p>
-    <p>Panel 05 shows a d<sub>0</sub>(z) distribution that is bimodal &mdash; a core of a few
+    <p><strong>Two defects sit behind panel 05, both found while building it.</strong></p>
+    <p>First, the track is parametrized from layer 0 &mdash;
+    <code>vxyz = {proj_GXc[0], proj_GYc[0], proj_GZc[0]}</code> at
+    <code>YMultiLayerPerceptron.cxx:4623</code> &mdash; but <code>proj_G*c</code> is an
+    uninitialized local and the loop that fills it (<code>:4465</code>) skips layers with no
+    hit. <strong>51.6&nbsp;% of tracks have no layer-0 hit</strong>, and for those
+    <code>vxyz</code> reads three slots that were never written. Median |d<sub>0</sub>(z)| is
+    29&nbsp;&micro;m with an L0 hit and 16.5&nbsp;mm without. Panel 05 therefore plots the
+    48.4&nbsp;% with an L0 hit and drops the rest; averaging the two populations means
+    averaging a measurement together with unwritten memory.</p>
+    <p>Second, on the tracks that remain, positive and negative charges sit
+    &plusmn;118&nbsp;&micro;m apart in d<sub>0</sub>(r&phi;). Reimplementing
+    <code>getImpactParams</code> offline reproduces the stored values to
+    0.001&nbsp;&micro;m, and negating the curvature term
+    <code>rp4 = yP[4]&middot;bz&middot;B2C</code> collapses that split to
+    &minus;0.68&nbsp;&micro;m while dropping the median from 110 to 9.5&nbsp;&micro;m. One
+    of its three factors carries a wrong sign: <code>B2C</code> (reconstructed for the
+    O2-free build, not copied from O2 source), the field polarity
+    <code>-10*DET_MAG</code>, or the charge convention
+    <code>Fitpar[0]&gt;0 ? -1 : +1</code>. Which one is not decidable from this page. It
+    does not change the selection &mdash; 0.94&nbsp;% of tracks fail the |ip| cut either
+    way, since the threshold is 2000&nbsp;&micro;m &mdash; so the training sample is
+    unaffected; only the reported impact parameter is.</p>
+    <p>An earlier version of this page read the <code>vdca</code> branches rather than
+    <code>fip</code>, and reported a d<sub>0</sub>(z) that was bimodal &mdash; a core of a few
     hundred &micro;m carrying about half the tracks, and a nearly flat pedestal out to
     &plusmn;6&nbsp;cm carrying the rest &mdash; while d<sub>0</sub>(r&phi;) from the same
-    tracks is a clean single peak with an RMS that falls as 1/p<sub>T</sub>. A transverse
-    fit that behaves and a longitudinal one that does not points at the z step rather than
-    at the geometry: <code>z_dca</code> is evaluated by extrapolating the z&ndash;&beta;
-    line to the &beta; of the closest-approach point, so a &beta; branch taken the wrong
-    way around the circle moves z by an arbitrary amount without touching r&phi;. That is
-    a reading of the shape, not a diagnosis &mdash; it has not been traced in the code.</p>
+    tracks was a clean single peak. That split was the same layer-0 defect seen through a
+    different branch: 44.7&nbsp;% of tracks inside the core against 48.4&nbsp;% with a
+    layer-0 hit. The explanation offered at the time &mdash; a &beta; branch taken the
+    wrong way around the circle &mdash; was wrong, and is recorded here because it was
+    published before it was checked.</p>
     <p>Treat this page as a way to see structure, not as a validated measurement.</p>
   </div>
 </section>
