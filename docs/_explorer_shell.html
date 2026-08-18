@@ -292,15 +292,18 @@ function drawCost(){
   document.getElementById("tiles").innerHTML = t.map(([v,k]) =>
     `<div class="tile"><span class="v">${v}</span><span class="k">${k}</span></div>`).join("");
   const P = D.prov || {};
-  const nt = +(P.nTrackMax ?? 8);
+  /* The Note column is left blank on purpose. Anything written here would be a
+     property of the page rather than of the loaded payload, so a swapped run
+     would be described by text authored for a different one. A future payload
+     can fill the column from its own data; the page will not fill it. */
   const rows = [
-    ["nTrackMax", P.nTrackMax ?? "?", `prongs per event; ndf = 12n+1 = ${12*nt+1}`],
-    ["nEPOCH", P.nEPOCH ?? "?", (+(P.nEPOCH ?? 0) === 0 ? "evaluation only, no weight update" : "training")],
-    ["nDATA", P.nDATA ?? "?", "source entries read"],
-    ["input", P.input ?? "?", "reconstruction sample"],
-    ["seed", P.seed ?? "?", "previous step supplying the weights"],
-    ["geometry", P.geometry ?? "?", "per-chip cache the run used"],
-    ["built", P.built ?? "?", "payload extraction time"]];
+    ["nTrackMax", P.nTrackMax ?? "?", ""],
+    ["nEPOCH", P.nEPOCH ?? "?", ""],
+    ["nDATA", P.nDATA ?? "?", ""],
+    ["input", P.input ?? "?", ""],
+    ["seed", P.seed ?? "?", ""],
+    ["geometry", P.geometry ?? "?", ""],
+    ["built", P.built ?? "?", ""]];
   document.querySelector("#runcfg tbody").innerHTML = rows.map(r =>
     `<tr><td>${r[0]}</td><td class="m">${r[1]}</td><td>${r[2]}</td></tr>`).join("");
 }
