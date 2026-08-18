@@ -1,0 +1,503 @@
+<title>ITS2 Alignment Explorer</title>
+
+<style>
+:root{
+  --ground:#F1F4F6; --surface:#FFFFFF; --surface-2:#E7ECF0;
+  --ink:#121A21; --ink-2:#4B5A67; --ink-3:#77848F;
+  --rule:#D4DBE2; --rule-strong:#AFBBC6;
+  --accent:#0D6B77; --accent-soft:#D9EDEF;
+  --signal:#9C5605; --signal-soft:#F6E8D4;
+  --reject:#962A39; --reject-soft:#F4DCDF;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7;
+  --div-neg:#2a78d6; --div-mid:#dfe3e6; --div-pos:#eb6834;
+  --font-display:"Iowan Old Style","Palatino Linotype",Palatino,Charter,Georgia,serif;
+  --font-body:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0E1317; --surface:#161C21; --surface-2:#1D252B;
+  --ink:#E2E8ED; --ink-2:#A2AFBA; --ink-3:#7B8894;
+  --rule:#273038; --rule-strong:#3C4852;
+  --accent:#4EBDCA; --accent-soft:#10333A;
+  --signal:#DFA24C; --signal-soft:#33270F;
+  --reject:#E8808F; --reject-soft:#391B21;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9;
+  --div-neg:#3987e5; --div-mid:#2b3238; --div-pos:#d95926;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1317; --surface:#161C21; --surface-2:#1D252B;
+  --ink:#E2E8ED; --ink-2:#A2AFBA; --ink-3:#7B8894;
+  --rule:#273038; --rule-strong:#3C4852;
+  --accent:#4EBDCA; --accent-soft:#10333A;
+  --signal:#DFA24C; --signal-soft:#33270F;
+  --reject:#E8808F; --reject-soft:#391B21;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9;
+  --div-neg:#3987e5; --div-mid:#2b3238; --div-pos:#d95926;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--font-body);
+  font-size:15px;line-height:1.6;margin:0;padding:0 clamp(1rem,3vw,2.5rem) 5rem;
+  -webkit-font-smoothing:antialiased}
+.page{max-width:1280px;margin:0 auto}
+
+header.mast{padding:clamp(2rem,5vw,3.5rem) 0 1.5rem;border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 .9rem}
+h1{font-family:var(--font-display);font-weight:600;font-size:clamp(1.9rem,4.5vw,2.9rem);
+  line-height:1.08;letter-spacing:-.015em;margin:0 0 .8rem;max-width:20ch;text-wrap:balance}
+.stand{color:var(--ink-2);max-width:66ch;margin:0}
+
+h2{font-family:var(--font-display);font-size:clamp(1.3rem,2.3vw,1.7rem);font-weight:600;
+  line-height:1.18;margin:0 0 .3rem;padding-top:.8rem;border-top:1px solid var(--rule-strong)}
+h2 .n{display:block;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--accent);font-weight:400;margin-bottom:.45rem}
+section{margin:0 0 3.2rem;padding-top:1.6rem}
+p{margin:0 0 .9rem;max-width:68ch;color:var(--ink-2)}
+p.lede{color:var(--ink-2);font-size:1rem;max-width:64ch}
+code{font-family:var(--font-mono);font-size:.85em;background:var(--surface-2);
+  padding:.08em .34em;border-radius:2px}
+strong{font-weight:650;color:var(--ink)}
+
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);margin:1.3rem 0 1.6rem}
+.tile{background:var(--surface);padding:.85rem 1rem}
+.tile .v{font-family:var(--font-mono);font-size:1.3rem;font-variant-numeric:tabular-nums;
+  color:var(--ink);display:block;line-height:1.2}
+.tile .k{font-size:.74rem;color:var(--ink-3);display:block;margin-top:.25rem;line-height:1.35}
+
+/* controls */
+.ctl{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;align-items:center;
+  background:var(--surface);border:1px solid var(--rule);padding:.7rem .9rem;margin:0 0 1rem}
+.ctl label{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);margin-right:.4rem}
+.seg{display:inline-flex;border:1px solid var(--rule-strong);border-radius:2px;overflow:hidden}
+.seg button{font-family:var(--font-mono);font-size:.72rem;padding:.28rem .6rem;border:0;
+  background:var(--surface);color:var(--ink-2);cursor:pointer;border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+input[type=range]{accent-color:var(--accent);vertical-align:middle}
+.val{font-family:var(--font-mono);font-size:.78rem;color:var(--ink);
+  font-variant-numeric:tabular-nums;min-width:5.5ch;display:inline-block}
+
+/* figure frames */
+.frame{background:var(--surface);border:1px solid var(--rule);padding:1rem;overflow-x:auto}
+.frame svg,.frame canvas{display:block;max-width:100%;height:auto}
+figcaption{font-size:.83rem;color:var(--ink-2);max-width:74ch;margin-top:.7rem;line-height:1.55}
+figcaption b{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent);font-weight:400;margin-right:.45rem}
+figure{margin:0 0 1.6rem}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:.35rem .9rem;margin:.6rem 0 0;
+  font-family:var(--font-mono);font-size:.72rem;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:.35rem}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block;flex:none}
+
+/* grid of charts */
+.grid2{display:grid;grid-template-columns:1fr;gap:1rem}
+@media(min-width:900px){.grid2{grid-template-columns:1fr 1fr}}
+
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--rule);margin:1.1rem 0 1.5rem}
+table{border-collapse:collapse;width:100%;min-width:520px;background:var(--surface);font-size:.83rem}
+th,td{text-align:left;padding:.45rem .8rem;border-bottom:1px solid var(--rule)}
+thead th{font-family:var(--font-mono);font-size:.65rem;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:400;background:var(--surface-2);border-bottom:1px solid var(--rule-strong)}
+tbody tr:last-child td{border-bottom:0}
+td.m{font-family:var(--font-mono);font-size:.78rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.note{border-left:3px solid var(--signal);background:var(--signal-soft);padding:.8rem 1rem;
+  margin:1.2rem 0;max-width:70ch;font-size:.9rem}
+.note .t{display:block;font-family:var(--font-mono);font-size:.65rem;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--signal);margin-bottom:.3rem}
+.note p{color:var(--ink-2);margin:0 0 .5rem}.note p:last-child{margin:0}
+
+.tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--rule-strong);
+  padding:.45rem .6rem;font-family:var(--font-mono);font-size:.72rem;color:var(--ink);
+  box-shadow:0 2px 10px rgba(0,0,0,.16);opacity:0;transition:opacity .1s;z-index:20;
+  white-space:pre;line-height:1.5;border-radius:2px}
+footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color:var(--ink-3);max-width:72ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="page">
+
+<header class="mast">
+  <p class="eyebrow">ALICE ITS2 &middot; run 539884 &middot; seeded from step 900</p>
+  <h1>ITS2 Alignment Explorer</h1>
+  <p class="stand">24&thinsp;120 sensors, six rigid-body parameters each, and 434&thinsp;569 tracks
+  of residuals from an <code>nEPOCH = 0</code> evaluation pass — plotted against the real
+  cached geometry the training itself used.</p>
+</header>
+
+<section id="cost">
+  <h2><span class="n">Panel 01</span>Cost monitoring</h2>
+  <p class="lede">The epoch &minus;1 baseline: a full cost evaluation with no weight update,
+  so these numbers are a pure function of the input sample and the geometry.</p>
+  <div class="tiles" id="tiles"></div>
+  <div class="tw"><table id="runcfg"><thead><tr><th>Setting</th><th>Value</th><th>Note</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="map">
+  <h2><span class="n">Panel 02</span>Detector map</h2>
+  <p class="lede">Every sensor at its real cached position. The &phi;&ndash;z view unrolls each
+  barrel; the r&ndash;z view is the cross-section. Colour encodes whichever quantity you select.</p>
+  <div class="ctl">
+    <span><label>Colour by</label><span class="seg" id="mapField">
+      <button data-v="depl_T0" aria-pressed="true">T1</button><button data-v="depl_T1">T2</button
+      ><button data-v="depl_T2">T3</button><button data-v="depl_R2">&gamma;</button
+      ><button data-v="depl_R0">&alpha;</button><button data-v="depl_R1">&beta;</button
+      ><button data-v="ntracks">occupancy</button></span></span>
+    <span><label>View</label><span class="seg" id="mapView">
+      <button data-v="phiz" aria-pressed="true">&phi;&ndash;z</button><button data-v="rz">r&ndash;z</button></span></span>
+    <span><label>Set</label><span class="seg" id="mapSet">
+      <button data-v="depl" aria-pressed="true">deployed</button><button data-v="step900">step 900</button
+      ><button data-v="diff">difference</button></span></span>
+  </div>
+  <figure><div class="frame"><canvas id="mapCanvas" width="1180" height="520"></canvas></div>
+    <div class="legend" id="mapLegend"></div>
+    <figcaption><b>Figure 1</b> Hover a sensor for its identity and value. Translations are in
+    &micro;m and rotations in &micro;rad, on a diverging scale centred at zero so sign is visible;
+    occupancy uses a single-hue scale. The difference view is deployed minus step 900 &mdash; the
+    comparison that has no equivalent outside this page.</figcaption></figure>
+</section>
+
+<section id="weak">
+  <h2><span class="n">Panel 03</span>Weak modes</h2>
+  <p class="lede">A coherent trend of a parameter against &phi; or z is the signature that
+  per-layer residual summaries average away. Each point is a stave-level mean.</p>
+  <div class="ctl">
+    <span><label>Layers</label><span class="seg" id="weakLayers"></span></span>
+  </div>
+  <div class="grid2">
+    <figure><div class="frame"><svg id="weakPhi" viewBox="0 0 560 300" role="img"
+      aria-label="In-plane rotation gamma against azimuth, averaged per stave, one line per layer."></svg></div>
+      <figcaption><b>Figure 2</b> &gamma; against &phi;. A sinusoid here is a coherent twist.</figcaption></figure>
+    <figure><div class="frame"><svg id="weakZ" viewBox="0 0 560 300" role="img"
+      aria-label="Radial translation against z, averaged per stave, one line per layer."></svg></div>
+      <figcaption><b>Figure 3</b> Radial translation against z. A slope is a telescope mode.</figcaption></figure>
+  </div>
+</section>
+
+<section id="resid">
+  <h2><span class="n">Panel 04</span>Residual exploration</h2>
+  <p class="lede">The sensor-frame residuals, binned against four abscissae. The p<sub>T</sub>
+  threshold drives every plot at once.</p>
+  <div class="ctl">
+    <span><label>Coordinate</label><span class="seg" id="resCoord">
+      <button data-v="ds1" aria-pressed="true">&Delta;s1</button><button data-v="ds2">&Delta;s2</button></span></span>
+    <span><label>Against</label><span class="seg" id="resAxis">
+      <button data-v="phi" aria-pressed="true">&phi;</button><button data-v="z">z</button
+      ><button data-v="eta">&eta;</button><button data-v="pT">p<sub>T</sub></button></span></span>
+    <span><label>p<sub>T</sub> &ge;</label>
+      <input type="range" id="resPt" min="0" max="4" step="1" value="0">
+      <span class="val" id="resPtV">0 GeV/c</span></span>
+  </div>
+  <figure><div class="frame"><svg id="resProf" viewBox="0 0 1180 380" role="img"
+    aria-label="Mean residual against the selected abscissa, one line per layer, at the selected transverse-momentum threshold."></svg></div>
+    <div class="legend" id="resLegend"></div>
+    <figcaption><b>Figure 4</b> Bin means with the RMS band on the highlighted layer. Bins holding fewer than 50 hits are left
+    empty rather than drawn, so thin statistics do not read as structure.</figcaption></figure>
+  <figure><div class="frame"><svg id="resHist" viewBox="0 0 1180 320" role="img"
+    aria-label="Residual distribution per layer at the selected transverse-momentum threshold."></svg></div>
+    <figcaption><b>Figure 5</b> Distributions, one panel per layer, on a shared vertical scale.
+    Entries beyond the axis are dropped rather than piled into the end bin; the fraction dropped is labelled under each panel.</figcaption></figure>
+  <div class="tw"><table id="resTable"><thead><tr><th>Layer</th><th>N</th><th>Median</th>
+    <th>IQR</th><th>|&Delta;s| &gt; 300&nbsp;&micro;m</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="limits">
+  <h2><span class="n">Panel 05</span>What these numbers rest on</h2>
+  <div class="note">
+    <span class="t">Unverified inputs</span>
+    <p>The geometry behind every position and residual here comes from a cache built
+    <strong>outside O2</strong>, and its alignment-delta convention has not been checked against
+    an O2 reference. Two constants in the impact-parameter cut &mdash;
+    <code>Angle2Alpha</code> and <code>B2C</code> &mdash; were reconstructed rather than copied
+    from O2 source, and they decide which tracks enter the cost at all.</p>
+    <p>The seed weights are from step 900, dated 2022, while the data is run 539884 from 2023.
+    Some of what appears here as misalignment may simply be that gap.</p>
+    <p>Treat this page as a way to see structure, not as a validated measurement.</p>
+  </div>
+</section>
+
+<footer>
+  <p>Built from <code>geometry/its2_geom.root</code>, <code>NetworkParameters/weights.txt</code>,
+  <code>MLPTrain_Step900/weights/weights.txt</code>, <code>UpdateSensorsList.txt</code> and
+  <code>Residual_Monitor_Epoch_At_-1.root</code> via <code>tools/build_explorer_data.py</code>.
+  Companion documents: <em>ITS2 ML Alignment Workflow</em> and <em>Alignment Platform Feasibility</em>.</p>
+</footer>
+
+</div>
+<div class="tip" id="tip"></div>
+<script type="application/json" id="D">__DATA__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("D").textContent);
+const C = D.chips, R = D.residuals, RUN = D.run;
+const NL = 7, LCOL = i => getComputedStyle(document.documentElement).getPropertyValue("--s"+(i+1)).trim();
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = n => n == null ? "—" : (Math.abs(n) >= 1000 ? n.toLocaleString() : n.toString());
+const tip = document.getElementById("tip");
+function showTip(e, txt){ tip.textContent = txt; tip.style.opacity = 1;
+  const p = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(e.clientX + p, innerWidth - w - 6) + "px";
+  tip.style.top  = Math.min(e.clientY + p, innerHeight - h - 6) + "px"; }
+function hideTip(){ tip.style.opacity = 0; }
+function seg(id, cb){ const el = document.getElementById(id);
+  el.addEventListener("click", ev => { const b = ev.target.closest("button"); if(!b) return;
+    [...el.querySelectorAll("button")].forEach(x => x.setAttribute("aria-pressed", x === b));
+    cb(b.dataset.v); }); }
+const cur = el => el.querySelector('[aria-pressed="true"]').dataset.v;
+
+/* ---------- Panel 1 : cost ---------- */
+(function(){
+  const t = [
+    [RUN.costTotal != null ? RUN.costTotal.toFixed(5) : "—", "initial cost (fit + charge sym.)"],
+    [RUN.costFit   != null ? RUN.costFit.toFixed(5)   : "—", "fit term"],
+    [RUN.costChSym != null ? RUN.costChSym.toExponential(2) : "—", "charge-symmetry term"],
+    [fmt(RUN.trainEvents), "training events"],
+    [fmt(RUN.trainTracks), "training tracks"],
+    [fmt(RUN.tracksInMonitor), "tracks in residual monitor"]];
+  document.getElementById("tiles").innerHTML = t.map(([v,k]) =>
+    `<div class="tile"><span class="v">${v}</span><span class="k">${k}</span></div>`).join("");
+  const rows = [["nTrackMax","8","prongs per event; ndf = 12n+1 = 97"],
+    ["nEPOCH","0","evaluation only, no weight update"],
+    ["nDATA","50 000","source entries read"],
+    ["seed","MLPTrain_Step900","weights.txt + weightsDU.txt"],
+    ["fit model","circle","B = 0.5 T, pT window 0.40–2.00 GeV/c"],
+    ["test split","evno%10 ∈ [6,8)","in-job control"]];
+  document.querySelector("#runcfg tbody").innerHTML = rows.map(r =>
+    `<tr><td>${r[0]}</td><td class="m">${r[1]}</td><td>${r[2]}</td></tr>`).join("");
+})();
+
+/* ---------- Panel 2 : detector map ---------- */
+const mapCv = document.getElementById("mapCanvas"), mctx = mapCv.getContext("2d");
+let mapState = { field:"depl_T0", view:"phiz", set:"depl" };
+function fieldValues(){
+  const f = mapState.field;
+  if(f === "ntracks") return C.ntracks;
+  const suffix = f.slice(5);                    // "T0" | "R2" ...
+  if(mapState.set === "diff"){
+    const a = C["depl_" + suffix], b = C["step900_" + suffix];
+    return b ? a.map((v,i) => v - b[i]) : a;
+  }
+  const k = mapState.set + "_" + suffix;
+  return C[k] || C["depl_" + suffix];
+}
+function ramp(t){                                // sequential, single hue
+  const stops = [[238,243,250],[124,172,224],[42,120,214],[22,64,120]];
+  t = Math.max(0, Math.min(1, t)); const x = t * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(x)), u = x - i;
+  const c = stops[i].map((v,j) => Math.round(v + (stops[i+1][j] - v) * u));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function diverge(t){                              // t in [-1,1]
+  const neg = [42,120,214], mid = [223,227,230], pos = [235,104,52];
+  const a = t < 0 ? neg : pos, u = Math.min(1, Math.abs(t));
+  const c = mid.map((v,j) => Math.round(v + (a[j] - v) * u));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function drawMap(){
+  const W = mapCv.width, H = mapCv.height, vals = fieldValues();
+  const isOcc = mapState.field === "ntracks";
+  mctx.clearRect(0,0,W,H);
+  mctx.fillStyle = css("--surface"); mctx.fillRect(0,0,W,H);
+  const fin = vals.filter(Number.isFinite).map(Math.abs).sort((a,b)=>a-b);
+  const hi = fin.length ? (fin[Math.floor(fin.length*0.97)] || 1) : 1;
+  const pad = {l:52,r:16,t:22,b:34};
+  const rowH = (H - pad.t - pad.b) / NL;
+  const zAll = C.z, zMax = 75;
+  mctx.strokeStyle = css("--rule"); mctx.lineWidth = 1;
+  mctx.font = "11px " + css("--font-mono"); mctx.fillStyle = css("--ink-3");
+  if(mapState.view === "phiz"){
+    for(let l=0;l<NL;l++){
+      const y0 = pad.t + l*rowH;
+      mctx.strokeRect(pad.l, y0+3, W-pad.l-pad.r, rowH-6);
+      mctx.fillStyle = css("--ink-3");
+      mctx.fillText("L"+l, 12, y0 + rowH/2 + 4);
+    }
+    mctx.fillText("z (cm)  →", pad.l, H-12);
+    mctx.fillText("φ within each layer band ↑", W/2-60, H-12);
+  } else {
+    mctx.strokeRect(pad.l, pad.t, W-pad.l-pad.r, H-pad.t-pad.b);
+    mctx.fillText("z (cm)  →", pad.l, H-12);
+    mctx.fillText("r (cm) ↑", 8, pad.t-8);
+  }
+  const pts = [];
+  for(let i=0;i<C.chipID.length;i++){
+    const l = C.layer[i], v = vals[i];
+    let x, y;
+    if(mapState.view === "phiz"){
+      const y0 = pad.t + l*rowH;
+      x = pad.l + ((C.z[i] + zMax) / (2*zMax)) * (W - pad.l - pad.r);
+      y = y0 + 4 + ((C.phi[i] + Math.PI) / (2*Math.PI)) * (rowH - 8);
+    } else {
+      x = pad.l + ((C.z[i] + zMax) / (2*zMax)) * (W - pad.l - pad.r);
+      y = H - pad.b - (C.r[i] / 42) * (H - pad.t - pad.b);
+    }
+    mctx.fillStyle = isOcc ? ramp(Math.min(1, v / hi)) : diverge(v / hi);
+    mctx.fillRect(x-1.4, y-1.4, 2.8, 2.8);
+    pts.push([x,y,i]);
+  }
+  mapCv._pts = pts; mapCv._hi = hi; mapCv._vals = vals;
+  const unit = isOcc ? "tracks" : (mapState.field.includes("T") ? "µm" : "µrad");
+  document.getElementById("mapLegend").innerHTML = isOcc
+    ? `<span><i style="background:${ramp(0)}"></i>0</span><span><i style="background:${ramp(.5)}"></i>${Math.round(hi/2).toLocaleString()}</span><span><i style="background:${ramp(1)}"></i>${Math.round(hi).toLocaleString()} ${unit}</span>`
+    : `<span><i style="background:${diverge(-1)}"></i>−${hi.toFixed(0)}</span><span><i style="background:${diverge(0)}"></i>0</span><span><i style="background:${diverge(1)}"></i>+${hi.toFixed(0)} ${unit}</span><span style="color:var(--ink-3)">scale clipped at the 97th percentile</span>`;
+}
+mapCv.addEventListener("mousemove", e => {
+  const r = mapCv.getBoundingClientRect(), sx = mapCv.width/r.width, sy = mapCv.height/r.height;
+  const mx = (e.clientX-r.left)*sx, my = (e.clientY-r.top)*sy;
+  let best = null, bd = 64;
+  for(const [x,y,i] of (mapCv._pts||[])){ const d=(x-mx)**2+(y-my)**2; if(d<bd){bd=d;best=i;} }
+  if(best==null){ hideTip(); return; }
+  const v = mapCv._vals[best], isOcc = mapState.field==="ntracks";
+  showTip(e, `chip ${C.chipID[best]}  L${C.layer[best]} stave ${C.stave[best]}\n`
+    + `z ${C.z[best].toFixed(2)} cm   r ${C.r[best].toFixed(2)} cm\n`
+    + `${mapState.field} = ${v.toFixed(isOcc?0:2)} ${isOcc?"tracks":(mapState.field.includes("T")?"µm":"µrad")}\n`
+    + `tracks ${C.ntracks[best].toLocaleString()}`);
+});
+mapCv.addEventListener("mouseleave", hideTip);
+seg("mapField", v => { mapState.field=v; drawMap(); });
+seg("mapView",  v => { mapState.view =v; drawMap(); });
+seg("mapSet",   v => { mapState.set  =v; drawMap(); });
+drawMap();
+
+/* ---------- Panel 3 : weak modes ---------- */
+let weakOn = [0,1,2,3,4,5,6];
+(function(){
+  const el = document.getElementById("weakLayers");
+  el.innerHTML = [...Array(NL)].map((_,l)=>`<button data-v="${l}" aria-pressed="true">L${l}</button>`).join("");
+  el.addEventListener("click", ev => { const b = ev.target.closest("button"); if(!b) return;
+    const on = b.getAttribute("aria-pressed") !== "true";
+    b.setAttribute("aria-pressed", on);
+    weakOn = [...el.querySelectorAll('[aria-pressed="true"]')].map(x=>+x.dataset.v);
+    drawWeak(); });
+})();
+function staveMeans(layer, xKey, vKey){
+  const m = new Map();
+  for(let i=0;i<C.chipID.length;i++){
+    if(C.layer[i]!==layer) continue;
+    const s = C.stave[i], e = m.get(s) || [0,0,0];
+    e[0] += C[xKey][i]; e[1] += C[vKey][i]; e[2]++; m.set(s,e);
+  }
+  return [...m.values()].map(e=>[e[0]/e[2], e[1]/e[2]]).sort((a,b)=>a[0]-b[0]);
+}
+function lineChart(svgId, series, xlab, ylab, xdom){
+  const svg = document.getElementById(svgId), W=560,H=300, p={l:56,r:12,t:14,b:40};
+  let ymin=Infinity, ymax=-Infinity;
+  series.forEach(s=>s.pts.forEach(([,y])=>{ if(y<ymin)ymin=y; if(y>ymax)ymax=y; }));
+  if(!isFinite(ymin)){ymin=-1;ymax=1;}
+  const padY=(ymax-ymin)*0.12||1; ymin-=padY; ymax+=padY;
+  const X=v=>p.l+((v-xdom[0])/(xdom[1]-xdom[0]))*(W-p.l-p.r);
+  const Y=v=>H-p.b-((v-ymin)/(ymax-ymin))*(H-p.t-p.b);
+  let g=`<rect x="${p.l}" y="${p.t}" width="${W-p.l-p.r}" height="${H-p.t-p.b}" fill="none" stroke="var(--rule)"/>`;
+  for(let k=0;k<=4;k++){ const v=ymin+(ymax-ymin)*k/4, y=Y(v);
+    g+=`<line x1="${p.l}" y1="${y.toFixed(1)}" x2="${W-p.r}" y2="${y.toFixed(1)}" stroke="var(--rule)" stroke-dasharray="2 3"/>`
+     +`<text x="${p.l-6}" y="${(y+3.5).toFixed(1)}" text-anchor="end" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${v.toFixed(1)}</text>`; }
+  if(ymin<0&&ymax>0) g+=`<line x1="${p.l}" y1="${Y(0).toFixed(1)}" x2="${W-p.r}" y2="${Y(0).toFixed(1)}" stroke="var(--rule-strong)"/>`;
+  for(let k=0;k<=4;k++){ const v=xdom[0]+(xdom[1]-xdom[0])*k/4;
+    g+=`<text x="${X(v).toFixed(1)}" y="${H-p.b+15}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${v.toFixed(1)}</text>`; }
+  series.forEach(s=>{ if(!s.pts.length) return;
+    g+=`<polyline fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" points="${
+      s.pts.map(([x,y])=>`${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(" ")}"/>`; });
+  g+=`<text x="${(W/2).toFixed(0)}" y="${H-6}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${xlab}</text>`
+   +`<text x="14" y="${(H/2).toFixed(0)}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10" transform="rotate(-90 14 ${(H/2).toFixed(0)})">${ylab}</text>`;
+  svg.innerHTML=g;
+}
+function drawWeak(){
+  lineChart("weakPhi", weakOn.map(l=>({color:LCOL(l), pts:staveMeans(l,"phi","depl_R2")})),
+    "φ (rad)", "γ (µrad)", [-Math.PI, Math.PI]);
+  const rad = weakOn.map(l=>{
+    const m=new Map();
+    for(let i=0;i<C.chipID.length;i++){ if(C.layer[i]!==l) continue;
+      const s=C.stave[i]+"|"+(C.z[i]>0?1:0), e=m.get(s)||[0,0,0];
+      const ct=Math.cos(C.phi[i]), st=Math.sin(C.phi[i]);
+      e[0]+=C.z[i]; e[1]+=C.depl_T0[i]*ct+C.depl_T1[i]*st; e[2]++; m.set(s,e); }
+    return {color:LCOL(l), pts:[...m.values()].map(e=>[e[0]/e[2],e[1]/e[2]]).sort((a,b)=>a[0]-b[0])};
+  });
+  lineChart("weakZ", rad, "z (cm)", "radial T (µm)", [-75,75]);
+}
+drawWeak();
+
+/* ---------- Panel 4 : residuals ---------- */
+let resState = { coord:"ds1", axis:"phi", pt:0 };
+const AXLAB = {phi:"φ (rad)", z:"z (cm)", eta:"η", pT:"p_T (GeV/c)"};
+function drawResid(){
+  const svg=document.getElementById("resProf"), W=1180,H=380, p={l:64,r:16,t:16,b:44};
+  const key=resState.coord+"|"+resState.axis;
+  const series=[]; let ymin=Infinity,ymax=-Infinity,xdom=null;
+  for(let l=0;l<NL;l++){
+    const pr=R.layers[String(l)].profiles[key][resState.pt]; if(!pr) continue;
+    const e=pr.edges; xdom=[e[0],e[e.length-1]];
+    const pts=[];
+    for(let b=0;b<pr.mean.length;b++){ const m=pr.mean[b]; if(m==null) continue;
+      const x=(e[b]+e[b+1])/2; pts.push([x,m]); if(m<ymin)ymin=m; if(m>ymax)ymax=m; }
+    series.push({l, color:LCOL(l), pts});
+  }
+  if(!isFinite(ymin)){ymin=-1;ymax=1;}
+  const pad=(ymax-ymin)*0.15||1; ymin-=pad; ymax+=pad;
+  const X=v=>p.l+((v-xdom[0])/(xdom[1]-xdom[0]))*(W-p.l-p.r);
+  const Y=v=>H-p.b-((v-ymin)/(ymax-ymin))*(H-p.t-p.b);
+  let g=`<rect x="${p.l}" y="${p.t}" width="${W-p.l-p.r}" height="${H-p.t-p.b}" fill="none" stroke="var(--rule)"/>`;
+  for(let k=0;k<=5;k++){ const v=ymin+(ymax-ymin)*k/5,y=Y(v);
+    g+=`<line x1="${p.l}" y1="${y.toFixed(1)}" x2="${W-p.r}" y2="${y.toFixed(1)}" stroke="var(--rule)" stroke-dasharray="2 3"/>`
+     +`<text x="${p.l-7}" y="${(y+3.5).toFixed(1)}" text-anchor="end" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${v.toFixed(1)}</text>`;}
+  if(ymin<0&&ymax>0) g+=`<line x1="${p.l}" y1="${Y(0).toFixed(1)}" x2="${W-p.r}" y2="${Y(0).toFixed(1)}" stroke="var(--rule-strong)" stroke-width="1.5"/>`;
+  for(let k=0;k<=6;k++){ const v=xdom[0]+(xdom[1]-xdom[0])*k/6;
+    g+=`<text x="${X(v).toFixed(1)}" y="${H-p.b+16}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${v.toFixed(2)}</text>`;}
+  series.forEach(s=>{ if(s.pts.length<2) return;
+    g+=`<polyline fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" points="${
+      s.pts.map(([x,y])=>`${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(" ")}"/>`;
+    const last=s.pts[s.pts.length-1];
+    g+=`<text x="${(X(last[0])-4).toFixed(1)}" y="${(Y(last[1])-6).toFixed(1)}" text-anchor="end" fill="${s.color}" font-family="var(--font-mono)" font-size="10">L${s.l}</text>`;});
+  g+=`<text x="${W/2}" y="${H-8}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11">${AXLAB[resState.axis]}</text>`
+   +`<text x="16" y="${H/2}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11" transform="rotate(-90 16 ${H/2})">mean ${resState.coord==="ds1"?"Δs1":"Δs2"} (µm)</text>`;
+  svg.innerHTML=g;
+  document.getElementById("resLegend").innerHTML=[...Array(NL)].map((_,l)=>
+    `<span><i style="background:${LCOL(l)}"></i>Layer ${l}</span>`).join("");
+
+  // histograms
+  const hs=document.getElementById("resHist"), HW=1180,HH=320,hp={l:40,r:12,t:14,b:62}, cw=(HW-hp.l-hp.r)/NL;
+  let mx=0; const hh=[];
+  for(let l=0;l<NL;l++){ const h=R.layers[String(l)].hists[resState.coord][resState.pt]; hh.push(h);
+    if(h) h.counts.forEach(c=>{ if(c>mx) mx=c; }); }
+  let q="";
+  for(let l=0;l<NL;l++){ const h=hh[l]; const x0=hp.l+l*cw;
+    q+=`<rect x="${(x0+3).toFixed(1)}" y="${hp.t}" width="${(cw-6).toFixed(1)}" height="${HH-hp.t-hp.b}" fill="none" stroke="var(--rule)"/>`
+     +`<text x="${(x0+cw/2).toFixed(1)}" y="${HH-hp.b+16}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">L${l} ±${h?h.hi:0}µm</text>`
+     +(h&&h.outside?`<text x="${(x0+cw/2).toFixed(1)}" y="${HH-hp.b+28}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="9">${h.outside.toFixed(1)}% beyond</text>`:"");
+    if(!h||!mx) continue;
+    const n=h.counts.length, bw=(cw-8)/n;
+    h.counts.forEach((c,b)=>{ if(!c) return;
+      const ht=(c/mx)*(HH-hp.t-hp.b-4), x=x0+4+b*bw, y=HH-hp.b-ht;
+      q+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(0.6,bw-0.4).toFixed(1)}" height="${ht.toFixed(1)}" fill="${LCOL(l)}"/>`;});
+    const zx=x0+4+(n/2)*bw;
+    q+=`<line x1="${zx.toFixed(1)}" y1="${hp.t}" x2="${zx.toFixed(1)}" y2="${HH-hp.b}" stroke="var(--rule-strong)" stroke-dasharray="3 3"/>`;}
+  q+=`<text x="${HW/2}" y="${HH-8}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11">${resState.coord==="ds1"?"Δs1":"Δs2"} (µm), shared vertical scale</text>`;
+  hs.innerHTML=q;
+
+  document.querySelector("#resTable tbody").innerHTML=[...Array(NL)].map((_,l)=>{
+    const h=R.layers[String(l)].hists[resState.coord][resState.pt];
+    const tail=h&&h.tail300!=null?h.tail300:null;
+    return `<tr><td class="m">L${l}</td><td class="m">${fmt(R.layers[String(l)].n)}</td>`
+      +`<td class="m">${h&&h.median!=null?h.median.toFixed(2)+" µm":"—"}</td>`
+      +`<td class="m">${h&&h.iqr!=null?h.iqr.toFixed(1)+" µm":"—"}</td>`
+      +`<td class="m"${tail!=null&&tail>20?' style="color:var(--reject)"':""}>${tail!=null?tail.toFixed(1)+" %":"—"}</td></tr>`;}).join("");
+}
+seg("resCoord", v=>{resState.coord=v; drawResid();});
+seg("resAxis",  v=>{resState.axis =v; drawResid();});
+document.getElementById("resPt").addEventListener("input", e=>{
+  resState.pt=+e.target.value;
+  document.getElementById("resPtV").textContent=R.ptCuts[resState.pt]+" GeV/c";
+  drawResid();});
+drawResid();
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{drawMap();drawWeak();drawResid();});
+</script>
