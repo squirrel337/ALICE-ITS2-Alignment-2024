@@ -212,7 +212,8 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
 <section id="resid">
   <h2><span class="n">Panel 04</span>Residual exploration</h2>
   <p class="lede">The sensor-frame residuals, binned against four abscissae. The p<sub>T</sub>
-  threshold drives every plot at once.</p>
+  threshold drives every plot at once. These are the <strong>held-out</strong> tracks, not
+  the training sample &mdash; see panel 06.</p>
   <div class="ctl">
     <span><label>Coordinate</label><span class="seg" id="resCoord">
       <button data-v="ds1" aria-pressed="true">&Delta;s1</button><button data-v="ds2">&Delta;s2</button></span></span>
@@ -295,6 +296,14 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     from O2 source, and they decide which tracks enter the cost at all.</p>
     <p>The seed weights are from step 900, dated 2022, while the data is run 539884 from 2023.
     Some of what appears here as misalignment may simply be that gap.</p>
+    <p><strong>These are test-set tracks.</strong> <code>GetCost</code> opens
+    <code>Residual_Monitor_Epoch_At_N.root</code> with <code>recreate</code>, and each epoch
+    calls it once for the training set and then once for the test set, so the second call
+    truncates the first. Watching a live job, the file reached 16.9&nbsp;MB during the
+    training pass and dropped to zero the moment the test pass reopened it. Every residual
+    and impact-parameter number on this page therefore comes from the held-out sample,
+    which is the right sample to judge alignment on, but it is not the sample the cost was
+    minimized over and the two need not agree.</p>
     <p>Panel 05 shows a d<sub>0</sub>(z) distribution that is bimodal &mdash; a core of a few
     hundred &micro;m carrying about half the tracks, and a nearly flat pedestal out to
     &plusmn;6&nbsp;cm carrying the rest &mdash; while d<sub>0</sub>(r&phi;) from the same
@@ -357,6 +366,7 @@ function drawCost(){
     ["nTrackMax", P.nTrackMax ?? "?", ""],
     ["nEPOCH", P.nEPOCH ?? "?", ""],
     ["epoch shown", P.epoch ?? "?", ""],
+    ["monitor set", P.monitorSet ?? "?", ""],
     ["nDATA", P.nDATA ?? "?", ""],
     ["input", P.input ?? "?", ""],
     ["seed", P.seed ?? "?", ""],

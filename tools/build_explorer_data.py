@@ -266,6 +266,13 @@ def main():
         "nDATA":     grep_define("YMLPParallel.h", "nDATA"),
         "epoch":     argsel["epoch"] if argsel["epoch"] is not None else "-1",
         "monitor":   RESMON,
+        # GetCost(EDataSet) opens the monitor file "recreate" and Train() calls it once
+        # for the training set and then once for the test set, so the second call
+        # truncates the first. Verified on a live job: the file reached 16.9 MB during
+        # the training pass and dropped to 0 when the test pass reopened it. What
+        # survives on disk is the test pass, and every residual and DCA number in this
+        # payload comes from it.
+        "monitorSet": "test (holdout); the training pass is overwritten in the same file",
         "built":     __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
 
