@@ -236,8 +236,56 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     <th>IQR</th><th>|&Delta;s| &gt; 300&nbsp;&micro;m</th></tr></thead><tbody></tbody></table></div>
 </section>
 
+<section id="dca">
+  <h2><span class="n">Panel 05</span>Impact parameter</h2>
+  <p class="lede">Distance of closest approach of the fitted helix to the beam, per track.
+  This is the one observable on the page that does not come from the sensor frame, so it
+  reads the geometry from the other side: a misalignment the residuals absorb into their
+  own fit still has to show up here as a bias in d<sub>0</sub>.</p>
+  <div class="ctl">
+    <span><label>Coordinate</label><span class="seg" id="dcaCoord">
+      <button data-v="d0xy" aria-pressed="true">d<sub>0</sub> (r&phi;)</button
+      ><button data-v="d0z">d<sub>0</sub> (z)</button></span></span>
+    <span><label>Against</label><span class="seg" id="dcaAxis">
+      <button data-v="phi" aria-pressed="true">&phi;</button><button data-v="eta">&eta;</button
+      ><button data-v="pT">p<sub>T</sub></button><button data-v="vz">vertex z</button></span></span>
+    <span><label>Statistic</label><span class="seg" id="dcaStat">
+      <button data-v="mean" aria-pressed="true">mean</button><button data-v="rms">RMS</button></span></span>
+    <span><label>p<sub>T</sub> &ge;</label>
+      <input type="range" id="dcaPt" min="0" max="4" step="1" value="0">
+      <span class="val" id="dcaPtV">0 GeV/c</span></span>
+  </div>
+  <div class="grid2">
+    <figure><div class="frame"><svg id="dcaProf" viewBox="0 0 560 300" role="img"
+      aria-label="Mean and RMS of the impact parameter against the selected abscissa."></svg></div>
+      <figcaption><b>Figure 6</b> One statistic at a time, each on its own scale. The mean
+      is the alignment-sensitive curve and sits near zero; the RMS is an order of magnitude
+      larger and scattering-dominated, so plotting both together flattens the mean into a
+      line. Bins under 50 tracks are left empty.</figcaption></figure>
+    <figure><div class="frame"><svg id="dcaChg" viewBox="0 0 560 300" role="img"
+      aria-label="Mean transverse impact parameter against azimuth, split by track charge."></svg></div>
+      <div class="legend"><span><i style="background:var(--div-pos)"></i>positive</span
+        ><span><i style="background:var(--div-neg)"></i>negative</span></div>
+      <figcaption><b>Figure 7</b> Positive against negative, in &phi;. A split that opens
+      with &phi; is the sagitta signature the cost's charge-symmetry term penalizes.
+      Charge is taken from the sign of the fitted curvature.</figcaption></figure>
+  </div>
+  <figure><div class="frame"><svg id="dcaHist" viewBox="0 0 1180 260" role="img"
+    aria-label="Impact parameter distribution at the selected transverse-momentum threshold."></svg></div>
+    <figcaption><b>Figure 8</b> Distribution at the selected threshold. As in panel 04,
+    entries beyond the axis are dropped rather than piled into the end bin, and the
+    dropped fraction is stated on the plot. For d<sub>0</sub>(z) that fraction is about 55&nbsp;%:
+    the distribution is a core a couple of hundred &micro;m wide sitting on a nearly flat
+    pedestal that reaches &plusmn;6&nbsp;cm, and no single axis shows both. The axis is set
+    to the core, so the stated fraction is the size of the pedestal. The transverse component shows nothing of the kind, which is what makes the
+    z one worth looking at &mdash; see panel 06.</figcaption></figure>
+  <div class="tw"><table id="dcaTable"><thead><tr><th>p<sub>T</sub> &ge;</th><th>N</th>
+    <th>Median</th><th>IQR</th><th>&lang;d<sub>0</sub>&rang; positive</th>
+    <th>&lang;d<sub>0</sub>&rang; negative</th><th>Split</th></tr></thead><tbody></tbody></table></div>
+</section>
+
 <section id="limits">
-  <h2><span class="n">Panel 05</span>What these numbers rest on</h2>
+  <h2><span class="n">Panel 06</span>What these numbers rest on</h2>
   <div class="note">
     <span class="t">Unverified inputs</span>
     <p>The geometry behind every position and residual here comes from a cache built
@@ -247,6 +295,15 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     from O2 source, and they decide which tracks enter the cost at all.</p>
     <p>The seed weights are from step 900, dated 2022, while the data is run 539884 from 2023.
     Some of what appears here as misalignment may simply be that gap.</p>
+    <p>Panel 05 shows a d<sub>0</sub>(z) distribution that is bimodal &mdash; a core of a few
+    hundred &micro;m carrying about half the tracks, and a nearly flat pedestal out to
+    &plusmn;6&nbsp;cm carrying the rest &mdash; while d<sub>0</sub>(r&phi;) from the same
+    tracks is a clean single peak with an RMS that falls as 1/p<sub>T</sub>. A transverse
+    fit that behaves and a longitudinal one that does not points at the z step rather than
+    at the geometry: <code>z_dca</code> is evaluated by extrapolating the z&ndash;&beta;
+    line to the &beta; of the closest-approach point, so a &beta; branch taken the wrong
+    way around the circle moves z by an arbitrary amount without touching r&phi;. That is
+    a reading of the shape, not a diagnosis &mdash; it has not been traced in the code.</p>
     <p>Treat this page as a way to see structure, not as a validated measurement.</p>
   </div>
 </section>
@@ -254,7 +311,7 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
 <footer>
   <p>Built from <code>geometry/its2_geom.root</code>, <code>NetworkParameters/weights.txt</code>,
   <code>MLPTrain_Step900/weights/weights.txt</code>, <code>UpdateSensorsList.txt</code> and
-  <code>Residual_Monitor_Epoch_At_-1.root</code> via <code>tools/build_explorer_data.py</code>.
+  <code>Residual_Monitor_Epoch_At_-1.root</code> (residuals and the <code>vdca</code>/<code>vtxevt</code> branches behind panel 05) via <code>tools/build_explorer_data.py</code>.
   Companion documents: <em>ITS2 ML Alignment Workflow</em> and <em>Alignment Platform Feasibility</em>.</p>
 </footer>
 
@@ -519,7 +576,70 @@ function drawResid(){
       +`<td class="m">${h&&h.iqr!=null?h.iqr.toFixed(1)+" µm":"—"}</td>`
       +`<td class="m"${tail!=null&&tail>20?' style="color:var(--reject)"':""}>${tail!=null?tail.toFixed(1)+" %":"—"}</td></tr>`;}).join("");
 }
-function renderAll(){ drawCost(); drawMap(); drawWeak(); drawResid(); describeSource(); }
+/* ---------- Panel 5 : impact parameter ---------- */
+let dcaState = { coord:"d0xy", axis:"phi", pt:0, stat:"mean" };
+const DAXLAB = {phi:"φ (rad)", eta:"η", pT:"p_T (GeV/c)", vz:"vertex z (cm)"};
+const DCOORDLAB = {d0xy:"d0 rφ (µm)", d0z:"d0 z (µm)"};
+function drawDca(){
+  const K = D.dca;
+  // The payload predates this panel in earlier runs, so a dataset without a dca block
+  // must hide the panel rather than throw and take the rest of the page down with it.
+  const sec = document.getElementById("dca");
+  if(!K || !K.profiles){ sec.hidden = true; return; }
+  sec.hidden = false;
+
+  const pr = (K.profiles[dcaState.coord+"|"+dcaState.axis]||[])[dcaState.pt];
+  const mid = e => e.slice(0,-1).map((v,i)=>(v+e[i+1])/2);
+  const pick = (p, f) => p ? mid(p.edges).map((x,i)=>[x,p[f][i]]).filter(q=>q[1]!=null) : [];
+  const xdom = pr ? [pr.edges[0], pr.edges[pr.edges.length-1]] : [0,1];
+  lineChart("dcaProf",
+    [{color:dcaState.stat==="mean"?"var(--accent)":"var(--signal)", pts:pick(pr,dcaState.stat)}],
+    DAXLAB[dcaState.axis], dcaState.stat + " " + DCOORDLAB[dcaState.coord], xdom);
+
+  const cp = t => pick((K.charge?.[t]||[])[dcaState.pt]?.profile, "mean");
+  lineChart("dcaChg",
+    [{color:"var(--div-pos)", pts:cp("pos")}, {color:"var(--div-neg)", pts:cp("neg")}],
+    "φ (rad)", "mean d0 rφ (µm)", [-Math.PI, Math.PI]);
+
+  const h = (K.hists[dcaState.coord]||[])[dcaState.pt];
+  const HW=1180, HH=260, hp={l:52,r:14,t:14,b:52};
+  let q=`<rect x="${hp.l}" y="${hp.t}" width="${HW-hp.l-hp.r}" height="${HH-hp.t-hp.b}" fill="none" stroke="var(--rule)"/>`;
+  if(h && h.counts.length){
+    const mx=Math.max(...h.counts), n=h.counts.length, bw=(HW-hp.l-hp.r)/n;
+    h.counts.forEach((c,b)=>{ if(!c) return;
+      const ht=(c/mx)*(HH-hp.t-hp.b-4), x=hp.l+b*bw, y=HH-hp.b-ht;
+      q+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(0.6,bw-0.5).toFixed(1)}" height="${ht.toFixed(1)}" fill="var(--accent)"/>`;});
+    const zx=hp.l+(n/2)*bw;
+    q+=`<line x1="${zx.toFixed(1)}" y1="${hp.t}" x2="${zx.toFixed(1)}" y2="${HH-hp.b}" stroke="var(--rule-strong)" stroke-dasharray="3 3"/>`;
+    for(let k=0;k<=6;k++){ const v=h.lo+(h.hi-h.lo)*k/6, x=hp.l+(HW-hp.l-hp.r)*k/6;
+      q+=`<text x="${x.toFixed(1)}" y="${HH-hp.b+16}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${Math.round(v)}</text>`;}
+    if(h.outside!=null)
+      q+=`<text x="${HW-hp.r-8}" y="${hp.t+16}" text-anchor="end" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${h.outside.toFixed(2)}% beyond axis</text>`;
+  }
+  q+=`<text x="${HW/2}" y="${HH-8}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11">${DCOORDLAB[dcaState.coord]}</text>`;
+  document.getElementById("dcaHist").innerHTML=q;
+
+  document.querySelector("#dcaTable tbody").innerHTML=(K.ptCuts||[]).map((cut,i)=>{
+    const hi=(K.hists[dcaState.coord]||[])[i];
+    const P=(K.charge?.pos||[])[i], N=(K.charge?.neg||[])[i];
+    const split=(P&&N&&P.meanD0xy!=null&&N.meanD0xy!=null)?P.meanD0xy-N.meanD0xy:null;
+    const u=v=>v==null?"—":v.toFixed(2)+" µm";
+    return `<tr${i===dcaState.pt?' style="background:var(--signal-soft)"':""}>`
+      +`<td class="m">${cut} GeV/c</td><td class="m">${fmt((P?P.n:0)+(N?N.n:0))}</td>`
+      +`<td class="m">${hi&&hi.median!=null?u(hi.median):"—"}</td>`
+      +`<td class="m">${hi&&hi.iqr!=null?u(hi.iqr):"—"}</td>`
+      +`<td class="m">${u(P?P.meanD0xy:null)}</td><td class="m">${u(N?N.meanD0xy:null)}</td>`
+      +`<td class="m">${u(split)}</td></tr>`;}).join("");
+}
+seg("dcaCoord", v=>{dcaState.coord=v; drawDca();});
+seg("dcaStat",  v=>{dcaState.stat =v; drawDca();});
+seg("dcaAxis",  v=>{dcaState.axis =v; drawDca();});
+document.getElementById("dcaPt").addEventListener("input", e=>{
+  dcaState.pt=+e.target.value;
+  document.getElementById("dcaPtV").textContent=(D.dca?.ptCuts||[0])[dcaState.pt]+" GeV/c";
+  drawDca();});
+
+function renderAll(){ drawCost(); drawMap(); drawWeak(); drawResid(); drawDca(); describeSource(); }
 seg("resCoord", v=>{resState.coord=v; drawResid();});
 seg("resAxis",  v=>{resState.axis =v; drawResid();});
 document.getElementById("resPt").addEventListener("input", e=>{
@@ -570,6 +690,10 @@ function adopt(obj, label){
   document.getElementById("resPt").max = String((R.ptCuts||[0]).length - 1);
   resState.pt = 0; document.getElementById("resPt").value = 0;
   document.getElementById("resPtV").textContent = (R.ptCuts||[0])[0] + " GeV/c";
+  const dcuts = (obj.dca && obj.dca.ptCuts) || [0];
+  document.getElementById("dcaPt").max = String(dcuts.length - 1);
+  dcaState.pt = 0; document.getElementById("dcaPt").value = 0;
+  document.getElementById("dcaPtV").textContent = dcuts[0] + " GeV/c";
   renderAll();
   return true;
 }

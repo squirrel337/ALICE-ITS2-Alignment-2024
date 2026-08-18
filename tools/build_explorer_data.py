@@ -8,7 +8,8 @@ ntuple and the run log; writes docs/explorer-data.json. Needs uproot and numpy, 
 
 The residual ntuple is ~200 MB and 434k tracks, so nothing raw is shipped: residuals are
 reduced here to profiles and histograms, binned once at the pT thresholds the module's
-own monitor macros use.
+own monitor macros use. The same reduction is applied to the impact parameter, which the
+monitor tree carries per track as vdca* and vtxevt*.
 """
 import json, re, sys, os
 import numpy as np
@@ -139,6 +140,54 @@ def main():
                      "tail300": round(float(np.mean(np.abs(vv) > 300) * 100), 2) if vv.size else None})
         res["layers"][str(l)] = entry
 
+    # ---- impact parameter (DCA) ------------------------------------------
+    # vdcaX/vdcaY are already expressed relative to the beam center: GetCost builds the
+    # circle in the beam-shifted frame (CircleXf = CircleXc - BeamCenter(0)) before
+    # solving for the closest approach, so no further subtraction belongs here. vdcaZ is
+    # absolute, hence the explicit vtxevtZ subtraction below.
+    dx, dy = br("vdcaX"), br("vdcaY")
+    trkphi = br("phi")
+    # Signed transverse impact parameter, the component perpendicular to the track
+    # direction. The sign is what makes a charge-dependent bias visible; |d0| folds it
+    # away, which is exactly the asymmetry the cost's charge-symmetry term targets.
+    d0xy = (-dx * np.sin(trkphi) + dy * np.cos(trkphi)) * 1e4        # cm -> um
+    d0z = (br("vdcaZ") - br("vtxevtZ")) * 1e4
+    charge = np.sign(br("cuvR"))     # curvature sign stands in for the track charge
+    vz = br("vtxevtZ")
+
+    DAX = {"phi": (-np.pi, np.pi, trkphi), "eta": (-1.5, 1.5, eta),
+           "pT": (0.4, 2.0, pT), "vz": (-15.0, 15.0, vz)}
+    # d0z is bimodal: a sharp core plus a nearly flat pedestal reaching several cm, so no
+    # single axis shows both. The axis is set to the core and the pedestal is reported as
+    # the dropped fraction, which states its size in one number instead of hiding it.
+    DRNG = {"d0xy": 300.0, "d0z": 500.0}
+    dca = {"ptCuts": PT_CUTS, "profiles": {}, "hists": {}, "charge": {},
+           "n": int(d0xy.size)}
+    for ci, cut in enumerate(PT_CUTS):
+        sel = pT >= cut
+        for cname, dv in (("d0xy", d0xy), ("d0z", d0z)):
+            for aname, (lo, hi, av) in DAX.items():
+                dca["profiles"].setdefault(f"{cname}|{aname}", []).append(
+                    profile(av[sel], dv[sel], lo, hi, NPROF))
+            rng = DRNG[cname]
+            vv = dv[sel]
+            inr = np.abs(vv) <= rng
+            h, e = np.histogram(vv[inr], bins=NHIST, range=(-rng, rng))
+            dca["hists"].setdefault(cname, []).append(
+                {"lo": -rng, "hi": rng, "counts": h.astype(int).tolist(),
+                 "outside": round(float(np.mean(~inr) * 100), 2) if vv.size else None,
+                 "median": round(float(np.median(vv)), 3) if vv.size else None,
+                 "iqr": round(float(np.subtract(*np.percentile(vv, [75, 25]))), 3) if vv.size else None})
+        # Positive against negative, profiled in phi. A coherent split here is the
+        # sagitta signature; the module already penalises it through fCostChargeSym.
+        for q, tag in ((+1, "pos"), (-1, "neg")):
+            m = sel & (charge == q)
+            dca["charge"].setdefault(tag, []).append({
+                "n": int(m.sum()),
+                "meanD0xy": round(float(d0xy[m].mean()), 4) if m.any() else None,
+                "rmsD0xy": round(float(d0xy[m].std()), 4) if m.any() else None,
+                "profile": profile(trkphi[m], d0xy[m], -np.pi, np.pi, NPROF)})
+
     # ---- run summary from the log ----------------------------------------
     run = {"tracksInMonitor": int(len(pT))}
     if os.path.exists(LOG):
@@ -179,7 +228,7 @@ def main():
 
     os.makedirs("docs", exist_ok=True)
     with open(OUT, "w") as fh:
-        json.dump({"chips": chips, "residuals": res, "run": run, "prov": prov,
+        json.dump({"chips": chips, "residuals": res, "dca": dca, "run": run, "prov": prov,
                    "chipBoundary": CHIPBND, "nChips": n}, fh, separators=(",", ":"))
     print(f"wrote {OUT}  {os.path.getsize(OUT)/1e6:.2f} MB   chips={n}  tracks={len(pT)}")
 
