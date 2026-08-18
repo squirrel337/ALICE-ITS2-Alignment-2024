@@ -356,6 +356,7 @@ function drawCost(){
   const rows = [
     ["nTrackMax", P.nTrackMax ?? "?", ""],
     ["nEPOCH", P.nEPOCH ?? "?", ""],
+    ["epoch shown", P.epoch ?? "?", ""],
     ["nDATA", P.nDATA ?? "?", ""],
     ["input", P.input ?? "?", ""],
     ["seed", P.seed ?? "?", ""],
@@ -659,7 +660,7 @@ function describeSource(){
   document.getElementById("mastStand").textContent =
     `${(D.nChips || 0).toLocaleString()} sensors, six rigid-body parameters each, and `
     + `${(D.run?.tracksInMonitor || 0).toLocaleString()} tracks of residuals from an `
-    + `nEPOCH = ${P.nEPOCH ?? "?"} pass — plotted against the real cached geometry the `
+    + `nEPOCH = ${P.nEPOCH ?? "?"} run, epoch ${P.epoch ?? "?"} pass — plotted against the real cached geometry the `
     + `training itself used.`;
   document.getElementById("srcWho").innerHTML =
     `<b>${bundled ? "bundled run" : "loaded file"}</b> · ${P.input || "unknown input"}`

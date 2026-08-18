@@ -72,10 +72,51 @@ def profile(x, y, lo, hi, nbin):
             "mean": r(mean), "rms": r(rms), "n": [int(c) for c in cnt]}
 
 
+def parse_args(argv):
+    """Point the extractor at a different run without editing it.
+
+        python3 tools/build_explorer_data.py --step-dir MLPTrain_Step902 --epoch 3
+
+    A training run writes one Residual_Monitor_Epoch_At_N.root per epoch, so the epoch is
+    part of choosing a dataset, not a detail. Unknown flags are refused rather than
+    ignored: silently building the default payload under a name the caller did not ask
+    for is worse than stopping.
+    """
+    global GEOM, WDEPL, WSTEP, USL, RESMON, LOG, OUT
+    step, epoch = None, None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        def val():
+            if i + 1 >= len(argv):
+                sys.exit(f"{a} needs a value")
+            return argv[i + 1]
+        if   a == "--step-dir": step = val(); i += 2
+        elif a == "--epoch":    epoch = val(); i += 2
+        elif a == "--resmon":   RESMON = val(); i += 2
+        elif a == "--log":      LOG = val(); i += 2
+        elif a == "--weights":  WDEPL = val(); i += 2
+        elif a == "--seed-weights": WSTEP = val(); i += 2
+        elif a == "--geometry": GEOM = val(); i += 2
+        elif a == "--usl":      USL = val(); i += 2
+        elif a == "--out":      OUT = val(); i += 2
+        elif a in ("-h", "--help"):
+            print(__doc__); print(parse_args.__doc__); sys.exit(0)
+        else:
+            sys.exit(f"unknown argument: {a}")
+    if step is not None or epoch is not None:
+        st = step if step is not None else os.path.dirname(os.path.dirname(RESMON))
+        ep = epoch if epoch is not None else "-1"
+        RESMON = os.path.join(st, "Residual", f"Residual_Monitor_Epoch_At_{ep}.root")
+    return {"step": step, "epoch": epoch}
+
+
 def main():
+    argsel = parse_args(sys.argv[1:])
     for p in (GEOM, WDEPL, USL, RESMON):
         if not os.path.exists(p):
             sys.exit(f"missing input: {p}")
+    print(f"[extract] residuals from {RESMON}")
 
     # ---- geometry + parameters -------------------------------------------
     g = uproot.open(GEOM)["geom"].arrays(library="np")
@@ -223,6 +264,8 @@ def main():
         "nTrackMax": grep_define("Ymlp/inc/DetectorConstant.h", "nTrackMax"),
         "nEPOCH":    grep_define("YMLPParallel.h", "nEPOCH"),
         "nDATA":     grep_define("YMLPParallel.h", "nDATA"),
+        "epoch":     argsel["epoch"] if argsel["epoch"] is not None else "-1",
+        "monitor":   RESMON,
         "built":     __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
 
