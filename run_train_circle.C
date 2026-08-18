@@ -51,7 +51,13 @@ int run_train_circle(int step) {
 
       gSystem->Exec(Form("tar -zxvf TrendingNetwork.tgz"));
 
+      // The trending macros load their own copy of YDetectorGeometry from inside
+      // TrendingNetwork/, so they need the geometry the same way the job does. With the
+      // cache backend that is the cache file, not o2sim_geometry.root; the latter is
+      // still copied so a YGEOM_USE_O2 build keeps working.
       gSystem->Exec(Form("cp o2sim_geometry.root TrendingNetwork/o2sim_geometry.root"));
+      gSystem->Exec(Form("mkdir -p TrendingNetwork/geometry"));
+      gSystem->Exec(Form("cp geometry/its2_geom.root TrendingNetwork/geometry/its2_geom.root"));
       gSystem->Exec(Form("cp MLPTrain/weights/* TrendingNetwork/weights/"));
       gSystem->Exec(Form("cp MLPTrain/Cost_Gradient/* TrendingNetwork/Cost_Gradient/"));
    
@@ -65,6 +71,7 @@ int run_train_circle(int step) {
       gSystem->Exec(Form("cd TrendingNetwork;root -l -q -b checkWeightGradients_extended.C'(-1,%d)';cd ..",nEPOCH-1)); 
       
       gSystem->Exec(Form("rm TrendingNetwork/o2sim_geometry.root"));
+      gSystem->Exec(Form("rm -rf TrendingNetwork/geometry"));
       gSystem->Exec(Form("rm TrendingNetwork/weights/*"));
       gSystem->Exec(Form("rm TrendingNetwork/Cost_Gradient/*"));
 
