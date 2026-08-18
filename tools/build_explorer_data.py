@@ -24,10 +24,20 @@ LOG    = "full.log"
 OUT    = "docs/explorer-data.json"
 
 PT_CUTS  = [0.0, 0.3, 0.5, 1.0, 2.0]      # same thresholds as monitor/batch_Residual
-NPROF    = 40                              # bins per profile abscissa
 NHIST    = 60                              # bins per residual histogram
 NLAYER   = 7
 CHIPBND  = [0, 108, 252, 432, 3120, 6480, 14712, 24120]
+NSTAVES  = [12, 16, 20, 24, 30, 42, 48]    # YAlignment.h:133
+
+# Profile binning is tied to the detector rather than picked as a round number, so a bin
+# corresponds to something physical instead of slicing structure finer than the sensors
+# that produce it.
+NPROF_RES = NSTAVES[6] // 2                # 24 -- half the outermost layer's staves
+NPROF_DCA_PHI = NSTAVES[0]                 # 12 -- one bin per layer-0 stave
+DCA_VZ_RANGE = 15.0                        # cm
+DCA_VZ_BIN = 0.5                           # cm
+NPROF_DCA_VZ = int(round(2 * DCA_VZ_RANGE / DCA_VZ_BIN))   # 60
+NPROF = NPROF_RES                          # default for anything not named above
 
 
 def load_weights(path):
@@ -140,7 +150,7 @@ def reduce_monitor(path):
                 for cname, dv in (("ds1", d1), ("ds2", d2)):
                     for aname, av in ax.items():
                         entry["profiles"].setdefault(f"{cname}|{aname}", []).append(
-                            profile(av[sel], dv[sel], *AX[aname], NPROF))
+                            profile(av[sel], dv[sel], *AX[aname], NPROF_RES))
                     rng = 300.0 if l < 3 else 600.0
                     vv = dv[sel]
                     inr = np.abs(vv) <= rng
@@ -176,8 +186,11 @@ def reduce_monitor(path):
         # real measurement together with unwritten memory.
         hasL0 = cid[:, 0] >= 0
 
-        DAX = {"phi": (-np.pi, np.pi, trkphi), "eta": (-1.5, 1.5, eta),
-               "pT": (0.4, 2.0, pT), "vz": (-15.0, 15.0, vz)}
+        # (lo, hi, values, nbin) per abscissa
+        DAX = {"phi": (-np.pi, np.pi, trkphi, NPROF_DCA_PHI),
+               "eta": (-1.5, 1.5, eta, NPROF),
+               "pT":  (0.4, 2.0, pT, NPROF),
+               "vz":  (-DCA_VZ_RANGE, DCA_VZ_RANGE, vz, NPROF_DCA_VZ)}
         DRNG = {"d0xy": 400.0, "d0z": 400.0}
         dca = {"ptCuts": PT_CUTS, "profiles": {}, "hists": {}, "charge": {},
                "n": int(d0xy.size), "nL0": int(hasL0.sum()),
@@ -186,9 +199,9 @@ def reduce_monitor(path):
             # Layer-0 tracks only. Including the rest would plot uninitialized memory.
             sel = (pT >= cut) & hasL0
             for cname, dv in (("d0xy", d0xy), ("d0z", d0z)):
-                for aname, (lo, hi, av) in DAX.items():
+                for aname, (lo, hi, av, nb) in DAX.items():
                     dca["profiles"].setdefault(f"{cname}|{aname}", []).append(
-                        profile(av[sel], dv[sel], lo, hi, NPROF))
+                        profile(av[sel], dv[sel], lo, hi, nb))
                 rng = DRNG[cname]
                 vv = dv[sel]
                 inr = np.abs(vv) <= rng
@@ -206,7 +219,7 @@ def reduce_monitor(path):
                     "n": int(m.sum()),
                     "meanD0xy": round(float(d0xy[m].mean()), 4) if m.any() else None,
                     "rmsD0xy": round(float(d0xy[m].std()), 4) if m.any() else None,
-                    "profile": profile(trkphi[m], d0xy[m], -np.pi, np.pi, NPROF)})
+                    "profile": profile(trkphi[m], d0xy[m], -np.pi, np.pi, NPROF_DCA_PHI)})
         return res, dca, int(len(pT))
 
 
