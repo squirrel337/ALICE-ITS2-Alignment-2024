@@ -63,8 +63,133 @@ def load_occupancy(path):
     return out
 
 
-def profile(x, y, lo, hi, nbin):
-    """Binned mean / RMS / count, with empty bins reported as null rather than zero."""
+def _caruana(centers, counts):
+    """Closed-form Gaussian from a weighted parabola through ln(counts).
+
+    scipy is not available and this file is deliberately ROOT-free, so there is no
+    curve_fit and no TF1. Caruana's method is exact for a Gaussian and has no minimiser
+    to fail to converge: the only iteration here is over the fit window, not over
+    parameters. Bins are weighted by their counts, which is the Poisson weight.
+    """
+    m = counts > 0
+    if m.sum() < 5:
+        return None
+    x, y, w = centers[m], np.log(counts[m]), counts[m]
+    X = np.stack([np.ones_like(x), x, x * x], axis=1)
+    A = (X * w[:, None]).T @ X
+    b = (X * w[:, None]).T @ y
+    try:
+        _, b1, c1 = np.linalg.solve(A, b)
+    except np.linalg.LinAlgError:
+        return None
+    if not np.isfinite(c1) or c1 >= 0:      # opens upward -> not a peak
+        return None
+    sigma = float(np.sqrt(-1.0 / (2.0 * c1)))
+    mu = float(-b1 / (2.0 * c1))
+    return (mu, sigma) if np.isfinite(mu) and np.isfinite(sigma) and sigma > 0 else None
+
+
+FIT_MINN = 150        # below this a core fit is not a measurement
+FIT_NBIN = 120        # bins across the fit window
+FIT_NSIG = 2.0        # window half-width, in sigma
+FIT_MAXIT = 12
+
+
+def gauss_core_fit(values, minn=FIT_MINN, nbin=FIT_NBIN, nsig=FIT_NSIG):
+    """Iterative +-2 sigma Gaussian core fit. Returns None when it does not hold.
+
+    The tails on these distributions are multiple scattering, so the centre is the
+    quantity worth quoting and the fit is deliberately restricted to the core. The
+    display histograms are too coarse for that -- 60 bins over a range chosen to show
+    tails leaves L0's FWHM only ~8 bins wide -- so the fit bins its own finer histogram
+    over the current window instead of reusing them.
+
+    Success is judged where the author asked for it: the fitted curve has to describe the
+    data down to half maximum. A fit that only matches the apex is reported as a failure
+    (None) rather than drawn, because a wrong core width is worse than no core width.
+    """
+    v = np.asarray(values, dtype=float)
+    v = v[np.isfinite(v)]
+    if v.size < minn:
+        return None
+    med = float(np.median(v))
+    iqr = float(np.subtract(*np.percentile(v, [75, 25])))
+    if not np.isfinite(iqr) or iqr <= 0:
+        return None
+    mu, sigma = med, iqr / 1.349          # IQR -> sigma for a Gaussian
+    converged = False
+    for it in range(FIT_MAXIT):
+        lo, hi = mu - nsig * sigma, mu + nsig * sigma
+        sel = (v >= lo) & (v <= hi)
+        if sel.sum() < minn:
+            return None
+        nb = int(np.clip(sel.sum() // 50, 20, nbin))
+        counts, edges = np.histogram(v[sel], bins=nb, range=(lo, hi))
+        centers = 0.5 * (edges[:-1] + edges[1:])
+        r = _caruana(centers, counts.astype(float))
+        if r is None:
+            return None
+        mu_n, sigma_n = r
+        if not (lo < mu_n < hi) or sigma_n <= 0 or sigma_n > 4 * sigma:
+            return None                    # ran away from the window it was fitted in
+        converged = abs(sigma_n - sigma) / sigma < 1e-3
+        mu, sigma = mu_n, sigma_n
+        if converged:
+            break
+    if not converged:
+        return None
+
+    # Does it hold down to half maximum? Compare fit and data over the bins the data
+    # itself puts above half its peak, which is the region the author named.
+    lo, hi = mu - nsig * sigma, mu + nsig * sigma
+    sel = (v >= lo) & (v <= hi)
+    nb = int(np.clip(sel.sum() // 50, 20, nbin))
+    counts, edges = np.histogram(v[sel], bins=nb, range=(lo, hi))
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    peak = counts.max()
+    if peak < 10:
+        return None
+    band = counts >= peak / 2.0
+    if band.sum() < 5:
+        return None
+    amp = counts[band].max() * 1.0
+    # amplitude from the data at the peak bin, so chi2 tests the shape not the scale
+    model = amp * np.exp(-0.5 * ((centers - mu) / sigma) ** 2)
+    scale = counts[band].sum() / max(model[band].sum(), 1e-9)
+    model *= scale
+    resid = counts[band] - model[band]
+    chi2 = float(np.sum(resid ** 2 / np.maximum(counts[band], 1.0)))
+    ndf = max(int(band.sum()) - 3, 1)
+
+    # Judge the fit on shape, not on chi2. With hundreds of thousands of tracks chi2/ndf
+    # runs large for any model that is merely very good, so it would reject fits that are
+    # visibly fine; the worst relative deviation across the half-maximum band does not
+    # scale with N and is the thing the author actually asked to hold. A combined
+    # bimodal d0 sample scores ~2 here against ~0.03 for a genuine core.
+    maxdev = float(np.max(np.abs(resid) / np.maximum(counts[band], 1.0)))
+    # The allowance has to sit above the Poisson floor of this particular histogram, or a
+    # thinly populated bin fails for being noisy rather than for being the wrong shape.
+    # 0.35 is the floor for well populated fits; the sqrt term lifts it for sparse ones.
+    thresh = max(0.35, 3.0 / np.sqrt(max(float(np.median(counts[band])), 1.0)))
+    if maxdev > thresh:
+        return None
+    n_in = int(sel.sum())
+    return {"maxDev": round(maxdev, 4),
+            "mu": round(mu, 4), "sigma": round(sigma, 4),
+            "muErr": round(sigma / np.sqrt(n_in), 4),
+            "sigmaErr": round(sigma / np.sqrt(2.0 * n_in), 4),
+            "lo": round(lo, 4), "hi": round(hi, 4),
+            "chi2ndf": round(chi2 / ndf, 3), "nIter": it + 1,
+            "coreFrac": round(float(n_in) / v.size, 4)}
+
+
+def profile(x, y, lo, hi, nbin, fit=False):
+    """Binned mean / RMS / count, with empty bins reported as null rather than zero.
+
+    With fit=True each x-bin also gets a Gaussian core fit of the y values inside it,
+    so a trend can be followed by the centre rather than by a mean the tails drag
+    around. Bins whose fit does not hold report null and are drawn as gaps.
+    """
     edges = np.linspace(lo, hi, nbin + 1)
     idx = np.clip(np.digitize(x, edges) - 1, 0, nbin - 1)
     keep = (x >= lo) & (x < hi)
@@ -78,8 +203,16 @@ def profile(x, y, lo, hi, nbin):
         var = np.where(cnt >= MINCNT, s2 / np.maximum(cnt, 1) - mean ** 2, np.nan)
     rms = np.sqrt(np.maximum(var, 0))
     r = lambda a: [None if not np.isfinite(v) else round(float(v), 4) for v in a]
-    return {"edges": [round(float(e), 4) for e in edges],
-            "mean": r(mean), "rms": r(rms), "n": [int(c) for c in cnt]}
+    out = {"edges": [round(float(e), 4) for e in edges],
+           "mean": r(mean), "rms": r(rms), "n": [int(c) for c in cnt]}
+    if fit:
+        mu_f, sg_f = [], []
+        for b in range(nbin):
+            f = gauss_core_fit(y[idx == b]) if cnt[b] >= FIT_MINN else None
+            mu_f.append(f["mu"] if f else None)
+            sg_f.append(f["sigma"] if f else None)
+        out["muFit"], out["sigmaFit"] = mu_f, sg_f
+    return out
 
 
 def parse_args(argv):
@@ -150,7 +283,7 @@ def reduce_monitor(path):
                 for cname, dv in (("ds1", d1), ("ds2", d2)):
                     for aname, av in ax.items():
                         entry["profiles"].setdefault(f"{cname}|{aname}", []).append(
-                            profile(av[sel], dv[sel], *AX[aname], NPROF_RES))
+                            profile(av[sel], dv[sel], *AX[aname], NPROF_RES, fit=True))
                     rng = 300.0 if l < 3 else 600.0
                     vv = dv[sel]
                     inr = np.abs(vv) <= rng
@@ -162,7 +295,8 @@ def reduce_monitor(path):
                          "outside": round(float(np.mean(~inr) * 100), 2) if vv.size else None,
                          "median": round(float(np.median(vv)), 3) if vv.size else None,
                          "iqr": round(float(np.subtract(*np.percentile(vv, [75, 25]))), 3) if vv.size else None,
-                         "tail300": round(float(np.mean(np.abs(vv) > 300) * 100), 2) if vv.size else None})
+                         "tail300": round(float(np.mean(np.abs(vv) > 300) * 100), 2) if vv.size else None,
+                         "fit": gauss_core_fit(vv)})
             res["layers"][str(l)] = entry
 
         # ---- impact parameter (DCA) ------------------------------------------
@@ -201,7 +335,7 @@ def reduce_monitor(path):
             for cname, dv in (("d0xy", d0xy), ("d0z", d0z)):
                 for aname, (lo, hi, av, nb) in DAX.items():
                     dca["profiles"].setdefault(f"{cname}|{aname}", []).append(
-                        profile(av[sel], dv[sel], lo, hi, nb))
+                        profile(av[sel], dv[sel], lo, hi, nb, fit=True))
                 rng = DRNG[cname]
                 vv = dv[sel]
                 inr = np.abs(vv) <= rng
@@ -210,7 +344,11 @@ def reduce_monitor(path):
                     {"lo": -rng, "hi": rng, "counts": h.astype(int).tolist(),
                      "outside": round(float(np.mean(~inr) * 100), 2) if vv.size else None,
                      "median": round(float(np.median(vv)), 3) if vv.size else None,
-                     "iqr": round(float(np.subtract(*np.percentile(vv, [75, 25]))), 3) if vv.size else None})
+                     "iqr": round(float(np.subtract(*np.percentile(vv, [75, 25]))), 3) if vv.size else None,
+                     # d0(rphi) combined is bimodal while the curvature-sign problem
+                     # stands, so this fit is expected to be refused there; the per-charge
+                     # fits below are the ones that mean something.
+                     "fit": gauss_core_fit(vv)})
             # Positive against negative, profiled in phi. A coherent split here is the
             # sagitta signature; the module already penalises it through fCostChargeSym.
             for q, tag in ((+1, "pos"), (-1, "neg")):
@@ -219,7 +357,11 @@ def reduce_monitor(path):
                     "n": int(m.sum()),
                     "meanD0xy": round(float(d0xy[m].mean()), 4) if m.any() else None,
                     "rmsD0xy": round(float(d0xy[m].std()), 4) if m.any() else None,
-                    "profile": profile(trkphi[m], d0xy[m], -np.pi, np.pi, NPROF_DCA_PHI)})
+                    # Each charge separately: the combined sample has two peaks, so a
+                    # single Gaussian over it describes neither. This is what turns the
+                    # split into a number with an uncertainty.
+                    "fit": gauss_core_fit(d0xy[m]),
+                    "profile": profile(trkphi[m], d0xy[m], -np.pi, np.pi, NPROF_DCA_PHI, fit=True)})
         return res, dca, int(len(pT))
 
 

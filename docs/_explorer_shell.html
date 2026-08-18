@@ -236,6 +236,9 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     <span><label>Against</label><span class="seg" id="resAxis">
       <button data-v="phi" aria-pressed="true">&phi;</button><button data-v="z">z</button
       ><button data-v="eta">&eta;</button><button data-v="pT">p<sub>T</sub></button></span></span>
+    <span><label>Statistic</label><span class="seg" id="resStat">
+      <button data-v="mean" aria-pressed="true">mean</button><button data-v="rms">RMS</button
+      ><button data-v="muFit">fit &mu;</button><button data-v="sigmaFit">fit &sigma;</button></span></span>
     <span><label>p<sub>T</sub> &ge;</label>
       <input type="range" id="resPt" min="0" max="4" step="1" value="0">
       <span class="val" id="resPtV">0 GeV/c</span></span>
@@ -244,13 +247,18 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     aria-label="Mean residual against the selected abscissa, one line per layer, at the selected transverse-momentum threshold."></svg></div>
     <div class="legend" id="resLegend"></div>
     <figcaption><b>Figure 4</b> Bin means with the RMS band on the highlighted layer. Bins holding fewer than 50 hits are left
-    empty rather than drawn, so thin statistics do not read as structure.</figcaption></figure>
-  <figure><div class="frame"><svg id="resHist" viewBox="0 0 1180 320" role="img"
+    empty rather than drawn, so thin statistics do not read as structure. The
+    <b>fit &mu;</b> and <b>fit &sigma;</b> options plot the Gaussian core of each bin
+    instead, which is the quantity that survives the scattering tails.</figcaption></figure>
+  <figure><div class="frame"><svg id="resHist" viewBox="0 0 1180 352" role="img"
     aria-label="Residual distribution per layer at the selected transverse-momentum threshold."></svg></div>
     <figcaption><b>Figure 5</b> Distributions, one panel per layer, on a shared vertical scale.
-    Entries beyond the axis are dropped rather than piled into the end bin; the fraction dropped is labelled under each panel.</figcaption></figure>
+    Entries beyond the axis are dropped rather than piled into the end bin; the fraction dropped is labelled under each panel. The red curve is an iterative
+    &plusmn;2&sigma; Gaussian core fit, accepted only where it holds down to half maximum
+    &mdash; the excess of data over the curve in the shoulders is the multiple-scattering
+    tail, and it is why fit sigma and the IQR differ as much as they do.</figcaption></figure>
   <div class="tw"><table id="resTable"><thead><tr><th>Layer</th><th>N</th><th>Median</th>
-    <th>IQR</th><th>|&Delta;s| &gt; 300&nbsp;&micro;m</th></tr></thead><tbody></tbody></table></div>
+    <th>IQR</th><th>fit mean</th><th>fit sigma</th><th>core</th><th>|&Delta;s| &gt; 300&nbsp;&micro;m</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section id="dca">
@@ -270,7 +278,8 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
       <button data-v="phi" aria-pressed="true">&phi;</button><button data-v="eta">&eta;</button
       ><button data-v="pT">p<sub>T</sub></button><button data-v="vz">vertex z</button></span></span>
     <span><label>Statistic</label><span class="seg" id="dcaStat">
-      <button data-v="mean" aria-pressed="true">mean</button><button data-v="rms">RMS</button></span></span>
+      <button data-v="mean" aria-pressed="true">mean</button><button data-v="rms">RMS</button
+      ><button data-v="muFit">fit &mu;</button><button data-v="sigmaFit">fit &sigma;</button></span></span>
     <span><label>p<sub>T</sub> &ge;</label>
       <input type="range" id="dcaPt" min="0" max="4" step="1" value="0">
       <span class="val" id="dcaPtV">0 GeV/c</span></span>
@@ -280,7 +289,10 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
       aria-label="Mean and RMS of the impact parameter against the selected abscissa."></svg></div>
       <figcaption><b>Figure 6</b> One statistic at a time, each on its own scale. The mean
       is far smaller than the RMS, so plotting both together flattens the mean into a line.
-      Bins under 50 tracks are left empty. The mean averages over both charges, so the
+      <b>fit &mu;</b> and <b>fit &sigma;</b> come from an iterative &plusmn;2&sigma; Gaussian
+      fit of the core in each bin, so a trend can be followed by the centre rather than by
+      a mean the tails drag around; bins whose fit does not hold down to half maximum are
+      left empty, as are bins under 50 tracks. The mean averages over both charges, so the
       &plusmn;118&nbsp;&micro;m split of figure 7 largely cancels out of it.</figcaption></figure>
     <figure><div class="frame"><svg id="dcaChg" viewBox="0 0 560 300" role="img"
       aria-label="Mean transverse impact parameter against azimuth, split by track charge."></svg></div>
@@ -298,10 +310,13 @@ footer{border-top:2px solid var(--ink);padding-top:1.2rem;font-size:.82rem;color
     two populations of tracks: they are the positive and negative charges pushed
     &plusmn;118&nbsp;&micro;m apart by the curvature-sign problem in panel 06.
     Correcting that sign merges them into a single peak with a 9.5&nbsp;&micro;m median.
-    d<sub>0</sub>(z) carries no such split and is the narrower of the two.</figcaption></figure>
+    d<sub>0</sub>(z) carries no such split and is the narrower of the two. No core fit is
+    drawn on the combined d<sub>0</sub>(r&phi;), and that is the correct outcome: one
+    Gaussian cannot describe two peaks, so it is refused rather than reported. The
+    per-charge fits in the table below are the ones that mean something.</figcaption></figure>
   <div class="tw"><table id="dcaTable"><thead><tr><th>p<sub>T</sub> &ge;</th><th>N</th>
-    <th>Median</th><th>IQR</th><th>&lang;d<sub>0</sub>&rang; positive</th>
-    <th>&lang;d<sub>0</sub>&rang; negative</th><th>Split</th></tr></thead><tbody></tbody></table></div>
+    <th>Median</th><th>IQR</th><th>fit mean, positive</th>
+    <th>fit mean, negative</th><th>fitted split</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section id="limits">
@@ -573,6 +588,30 @@ function drawWeak(){
   });
   lineChart("weakZ", rad, "z (cm)", "radial T (µm)", [-75,75]);
 }
+/* ---------- gaussian core fit overlay ----------
+   The payload carries a fit only when it held down to half maximum; when it did not,
+   `fit` is null and nothing is drawn. A missing curve is the honest signal that the core
+   is not Gaussian there, so it must never be replaced by a guess. */
+function fitPath(fit, h, X, Y, peakCount){
+  if(!fit || !h) return "";
+  const n = h.counts.length, w = (h.hi - h.lo) / n;
+  // scale so the curve carries the same area as the data inside the fit window
+  let inWin = 0;
+  for(let b=0;b<n;b++){ const c = h.lo + (b+0.5)*w; if(c>=fit.lo && c<=fit.hi) inWin += h.counts[b]; }
+  if(!inWin) return "";
+  const amp = inWin * w / (fit.sigma * Math.sqrt(2*Math.PI));
+  const pts = [];
+  for(let i=0;i<=160;i++){
+    const x = h.lo + (h.hi-h.lo)*i/160;
+    const y = amp * Math.exp(-0.5*Math.pow((x-fit.mu)/fit.sigma,2));
+    pts.push(`${X(x).toFixed(1)},${Y(y).toFixed(1)}`);
+  }
+  return `<polyline fill="none" stroke="var(--reject)" stroke-width="1.6" opacity=".9" points="${pts.join(" ")}"/>`;
+}
+function fitLabel(fit){
+  return fit ? `µ ${fit.mu.toFixed(1)} σ ${fit.sigma.toFixed(1)}` : "no core fit";
+}
+
 /* ---------- epoch selection ----------
    A payload may carry several epochs. The one it was extracted at keeps the full
    five-pT-cut detail; the others are reduced at pT >= 0 only, because six epochs of the
@@ -645,7 +684,7 @@ function drawTrend(){
 }
 
 /* ---------- Panel 4 : residuals ---------- */
-let resState = { coord:"ds1", axis:"phi", pt:0 };
+let resState = { coord:"ds1", axis:"phi", pt:0, stat:"mean" };
 const AXLAB = {phi:"φ (rad)", z:"z (cm)", eta:"η", pT:"p_T (GeV/c)"};
 function drawResid(){
   const RA=activeRes();
@@ -654,9 +693,10 @@ function drawResid(){
   const series=[]; let ymin=Infinity,ymax=-Infinity,xdom=null;
   for(let l=0;l<NL;l++){
     const pr=RA.layers[String(l)].profiles[key][resState.pt]; if(!pr) continue;
+    const arr=pr[resState.stat]; if(!arr) continue;
     const e=pr.edges; xdom=[e[0],e[e.length-1]];
     const pts=[];
-    for(let b=0;b<pr.mean.length;b++){ const m=pr.mean[b]; if(m==null) continue;
+    for(let b=0;b<arr.length;b++){ const m=arr[b]; if(m==null) continue;
       const x=(e[b]+e[b+1])/2; pts.push([x,m]); if(m<ymin)ymin=m; if(m>ymax)ymax=m; }
     series.push({l, color:LCOL(l), pts});
   }
@@ -677,13 +717,13 @@ function drawResid(){
     const last=s.pts[s.pts.length-1];
     g+=`<text x="${(X(last[0])-4).toFixed(1)}" y="${(Y(last[1])-6).toFixed(1)}" text-anchor="end" fill="${s.color}" font-family="var(--font-mono)" font-size="10">L${s.l}</text>`;});
   g+=`<text x="${W/2}" y="${H-8}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11">${AXLAB[resState.axis]}</text>`
-   +`<text x="16" y="${H/2}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11" transform="rotate(-90 16 ${H/2})">mean ${resState.coord==="ds1"?"Δs1":"Δs2"} (µm)</text>`;
+   +`<text x="16" y="${H/2}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11" transform="rotate(-90 16 ${H/2})">${({mean:"mean",rms:"RMS",muFit:"fit µ",sigmaFit:"fit σ"})[resState.stat]} ${resState.coord==="ds1"?"Δs1":"Δs2"} (µm)</text>`;
   svg.innerHTML=g;
   document.getElementById("resLegend").innerHTML=[...Array(NL)].map((_,l)=>
     `<span><i style="background:${LCOL(l)}"></i>Layer ${l}</span>`).join("");
 
   // histograms
-  const hs=document.getElementById("resHist"), HW=1180,HH=320,hp={l:40,r:12,t:14,b:62}, cw=(HW-hp.l-hp.r)/NL;
+  const hs=document.getElementById("resHist"), HW=1180,HH=352,hp={l:40,r:12,t:14,b:82}, cw=(HW-hp.l-hp.r)/NL;
   let mx=0; const hh=[];
   for(let l=0;l<NL;l++){ const h=RA.layers[String(l)].hists[resState.coord][resState.pt]; hh.push(h);
     if(h) h.counts.forEach(c=>{ if(c>mx) mx=c; }); }
@@ -698,8 +738,11 @@ function drawResid(){
       const ht=(c/mx)*(HH-hp.t-hp.b-4), x=x0+4+b*bw, y=HH-hp.b-ht;
       q+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(0.6,bw-0.4).toFixed(1)}" height="${ht.toFixed(1)}" fill="${LCOL(l)}"/>`;});
     const zx=x0+4+(n/2)*bw;
-    q+=`<line x1="${zx.toFixed(1)}" y1="${hp.t}" x2="${zx.toFixed(1)}" y2="${HH-hp.b}" stroke="var(--rule-strong)" stroke-dasharray="3 3"/>`;}
-  q+=`<text x="${HW/2}" y="${HH-8}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11">${resState.coord==="ds1"?"Δs1":"Δs2"} (µm), shared vertical scale</text>`;
+    q+=`<line x1="${zx.toFixed(1)}" y1="${hp.t}" x2="${zx.toFixed(1)}" y2="${HH-hp.b}" stroke="var(--rule-strong)" stroke-dasharray="3 3"/>`;
+    const XH=v=>x0+4+((v-h.lo)/(h.hi-h.lo))*(cw-8), YH=v=>HH-hp.b-(v/mx)*(HH-hp.t-hp.b-4);
+    q+=fitPath(h.fit, h, XH, YH, mx);
+    q+=`<text x="${(x0+cw/2).toFixed(1)}" y="${HH-hp.b+42}" text-anchor="middle" fill="${h.fit?"var(--reject)":"var(--ink-3)"}" font-family="var(--font-mono)" font-size="9">${fitLabel(h.fit)}</text>`;}
+  q+=`<text x="${HW/2}" y="${HH-6}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="11">${resState.coord==="ds1"?"Δs1":"Δs2"} (µm), shared vertical scale — red curve is the Gaussian core fit</text>`;
   hs.innerHTML=q;
 
   document.querySelector("#resTable tbody").innerHTML=[...Array(NL)].map((_,l)=>{
@@ -708,6 +751,9 @@ function drawResid(){
     return `<tr><td class="m">L${l}</td><td class="m">${fmt(RA.layers[String(l)].n)}</td>`
       +`<td class="m">${h&&h.median!=null?h.median.toFixed(2)+" µm":"—"}</td>`
       +`<td class="m">${h&&h.iqr!=null?h.iqr.toFixed(1)+" µm":"—"}</td>`
+      +`<td class="m">${h&&h.fit?h.fit.mu.toFixed(2)+" ±"+h.fit.muErr.toFixed(2):"—"}</td>`
+      +`<td class="m">${h&&h.fit?h.fit.sigma.toFixed(1)+" ±"+h.fit.sigmaErr.toFixed(1):"—"}</td>`
+      +`<td class="m">${h&&h.fit?(h.fit.coreFrac*100).toFixed(0)+" %":"—"}</td>`
       +`<td class="m"${tail!=null&&tail>20?' style="color:var(--reject)"':""}>${tail!=null?tail.toFixed(1)+" %":"—"}</td></tr>`;}).join("");
 }
 /* ---------- Panel 5 : impact parameter ---------- */
@@ -726,9 +772,11 @@ function drawDca(){
   const mid = e => e.slice(0,-1).map((v,i)=>(v+e[i+1])/2);
   const pick = (p, f) => p ? mid(p.edges).map((x,i)=>[x,p[f][i]]).filter(q=>q[1]!=null) : [];
   const xdom = pr ? [pr.edges[0], pr.edges[pr.edges.length-1]] : [0,1];
+  const STATLAB={mean:"mean",rms:"RMS",muFit:"fit µ",sigmaFit:"fit σ"};
   lineChart("dcaProf",
-    [{color:dcaState.stat==="mean"?"var(--accent)":"var(--signal)", pts:pick(pr,dcaState.stat)}],
-    DAXLAB[dcaState.axis], dcaState.stat + " " + DCOORDLAB[dcaState.coord], xdom);
+    [{color:/Fit$/.test(dcaState.stat)?"var(--reject)":(dcaState.stat==="mean"?"var(--accent)":"var(--signal)"),
+      pts:pick(pr,dcaState.stat)}],
+    DAXLAB[dcaState.axis], STATLAB[dcaState.stat] + " " + DCOORDLAB[dcaState.coord], xdom);
 
   const cp = t => pick((K.charge?.[t]||[])[dcaState.pt]?.profile, "mean");
   lineChart("dcaChg",
@@ -745,6 +793,9 @@ function drawDca(){
       q+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(0.6,bw-0.5).toFixed(1)}" height="${ht.toFixed(1)}" fill="var(--accent)"/>`;});
     const zx=hp.l+(n/2)*bw;
     q+=`<line x1="${zx.toFixed(1)}" y1="${hp.t}" x2="${zx.toFixed(1)}" y2="${HH-hp.b}" stroke="var(--rule-strong)" stroke-dasharray="3 3"/>`;
+    const XD=v=>hp.l+((v-h.lo)/(h.hi-h.lo))*(HW-hp.l-hp.r), YD=v=>HH-hp.b-(v/mx)*(HH-hp.t-hp.b-4);
+    q+=fitPath(h.fit, h, XD, YD, mx);
+    q+=`<text x="${hp.l+8}" y="${hp.t+16}" fill="${h.fit?"var(--reject)":"var(--ink-3)"}" font-family="var(--font-mono)" font-size="10">${fitLabel(h.fit)}</text>`;
     for(let k=0;k<=6;k++){ const v=h.lo+(h.hi-h.lo)*k/6, x=hp.l+(HW-hp.l-hp.r)*k/6;
       q+=`<text x="${x.toFixed(1)}" y="${HH-hp.b+16}" text-anchor="middle" fill="var(--ink-3)" font-family="var(--font-mono)" font-size="10">${Math.round(v)}</text>`;}
     if(h.outside!=null)
@@ -756,14 +807,17 @@ function drawDca(){
   document.querySelector("#dcaTable tbody").innerHTML=(K.ptCuts||[]).map((cut,i)=>{
     const hi=(K.hists[dcaState.coord]||[])[i];
     const P=(K.charge?.pos||[])[i], N=(K.charge?.neg||[])[i];
-    const split=(P&&N&&P.meanD0xy!=null&&N.meanD0xy!=null)?P.meanD0xy-N.meanD0xy:null;
+    const fpos=P&&P.fit, fneg=N&&N.fit;
+    const split=(fpos&&fneg)?fpos.mu-fneg.mu:null;
+    const splitErr=(fpos&&fneg)?Math.hypot(fpos.muErr,fneg.muErr):null;
     const u=v=>v==null?"—":v.toFixed(2)+" µm";
     return `<tr${i===dcaState.pt?' style="background:var(--signal-soft)"':""}>`
       +`<td class="m">${cut} GeV/c</td><td class="m">${fmt((P?P.n:0)+(N?N.n:0))}</td>`
       +`<td class="m">${hi&&hi.median!=null?u(hi.median):"—"}</td>`
       +`<td class="m">${hi&&hi.iqr!=null?u(hi.iqr):"—"}</td>`
-      +`<td class="m">${u(P?P.meanD0xy:null)}</td><td class="m">${u(N?N.meanD0xy:null)}</td>`
-      +`<td class="m">${u(split)}</td></tr>`;}).join("");
+      +`<td class="m">${fpos?fpos.mu.toFixed(2)+" ±"+fpos.muErr.toFixed(2):"—"}</td>`
+      +`<td class="m">${fneg?fneg.mu.toFixed(2)+" ±"+fneg.muErr.toFixed(2):"—"}</td>`
+      +`<td class="m">${split==null?"—":split.toFixed(2)+" ±"+splitErr.toFixed(2)+" µm"}</td></tr>`;}).join("");
 }
 seg("dcaCoord", v=>{dcaState.coord=v; drawDca();});
 seg("dcaStat",  v=>{dcaState.stat =v; drawDca();});
@@ -775,6 +829,7 @@ document.getElementById("dcaPt").addEventListener("input", e=>{
 
 function renderAll(){ drawCost(); drawTrend(); drawMap(); drawWeak(); drawResid(); drawDca(); describeSource(); }
 seg("epochSel", v=>{ epochSel = v; syncEpochNote(); drawResid(); drawDca(); });
+seg("resStat",  v=>{resState.stat =v; drawResid();});
 seg("resCoord", v=>{resState.coord=v; drawResid();});
 seg("resAxis",  v=>{resState.axis =v; drawResid();});
 document.getElementById("resPt").addEventListener("input", e=>{
