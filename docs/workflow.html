@@ -619,7 +619,7 @@ a:focus-visible, .rail a:focus-visible {
         <tr><th>Script or macro</th><th>Role</th><th>Invocation</th></tr>
       </thead>
       <tbody>
-        <tr><td class="mono">process_all_master.sh</td><td>Loads the O<sup>2</sup> environment through <code>alienv</code>, then hands over to the campaign driver.</td><td class="val">./process_all_master.sh Tag stepI stepF</td></tr>
+        <tr><td class="mono">process_all_master.sh</td><td>Hands over to the campaign driver. Loads O<sup>2</sup> through <code>alienv</code> only when <code>YGEOM_USE_O2</code> is set; the default cache-backed build needs neither.</td><td class="val">./process_all_master.sh Tag stepI stepF</td></tr>
         <tr><td class="mono">process_all_train.sh</td><td>Runs the beam-profile pass once, then loops over steps: writes <code>batch_train</code>, calls <code>process.sh</code>, renames the log, archives the step directory.</td><td class="val">called by the master</td></tr>
         <tr><td class="mono">process.sh</td><td>One-line ROOT launcher: <code>root -l -b &lt; batch_train &gt; train.log</code>.</td><td class="val">called per step</td></tr>
         <tr><td class="mono">batch_train</td><td>Generated per step. Loads <code>YDetectorGeometry.cxx</code>, then executes <code>run_train_circle.C(step)</code>.</td><td class="val">regenerated each iteration</td></tr>
