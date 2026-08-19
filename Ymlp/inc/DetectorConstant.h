@@ -25,7 +25,7 @@
 //#define NCols 1024 //column number in Alpide chip
 //#define NRows 512  //row number in Alpide chip
 
-#define nTrackMax 	6  
+#define nTrackMax 	8  
 
 #define FITMODEL	2 // 1 : Line , 2 : Circle
 
