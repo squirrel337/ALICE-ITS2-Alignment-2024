@@ -82,3 +82,6 @@ hits*.txt
 # Python bytecode cache (tools/ is imported as a module when validating the core fit)
 __pycache__/
 *.pyc
+
+# Run-console job directories (composed per launch, regenerable)
+console_out/
