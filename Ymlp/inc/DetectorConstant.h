@@ -31,11 +31,7 @@
 
 #define SIGMA_MEAS	1
 
-#define DET_MAG 	-0.5 //T  signed: negative solenoid polarity for this run.
-// The sign is used, not just the magnitude: det_mag_in_kG = -10*DET_MAG feeds
-// YImpactParameter::getImpactParams, where rp4 = yP[4]*bz*B2C sets the curvature
-// correction. GetSigma squares the field so it is unaffected, but anything taking a
-// magnitude from DET_MAG must say so explicitly -- see RecMomentumT.
+#define DET_MAG 	0.5 //T
 
 #define VERTEXFIT	kFALSE //TRUE FALSE
 
