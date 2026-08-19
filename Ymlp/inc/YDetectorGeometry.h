@@ -14,21 +14,33 @@
 
 #include "TObject.h"
 #include "TString.h"
+#include "TVector3.h"
+#include "TMath.h"
 #include <vector>
 
+// ---------------------------------------------------------------------------
+// Backend selection.
+//
+// By default this class is backed by a geometry cache file produced once by
+// tools/export_geometry_cache.C, and the module then runs on ROOT alone.
+// Define YGEOM_USE_O2 to restore the original O2-backed implementation, which is
+// what the cache is validated against.
+// ---------------------------------------------------------------------------
+#ifdef YGEOM_USE_O2
 #if !defined(__CLING__) || defined(__ROOTCLING__)
 //#define ENABLE_UPGRADES
 #include "DetectorsCommonDataFormats/DetID.h"
 #include "DetectorsCommonDataFormats/NameConf.h"
 #include "DetectorsCommonDataFormats/AlignParam.h"
 #include "DetectorsBase/GeometryManager.h"
-#include "CCDB/CcdbApi.h"
 #include "ITSBase/GeometryTGeo.h"
 #include <TRandom.h>
 #include <TFile.h>
 #include <vector>
 #include <fmt/format.h>
 #endif
+#endif
+
 //____________________________________________________________________
 //
 // YDetectorGeometry
@@ -44,7 +56,7 @@ namespace Internal {
 
    YDetectorGeometry *GetGEOM2();
 
-} 
+}
 } // End ROOT::Internal
 
 
@@ -57,14 +69,24 @@ private:
    YDetectorGeometry& operator=(const YDetectorGeometry&);        			//Not implemented
 
 protected:
-   YDetectorGeometry(const char *name, const char *title);              				  
+   YDetectorGeometry(const char *name, const char *title);
    friend class ::GEOM::Internal::YDetectorGeometryAllocator;
 
 public:
    YDetectorGeometry();
-   virtual ~YDetectorGeometry() {};  
-      
+   virtual ~YDetectorGeometry() {};
+
+#ifdef YGEOM_USE_O2
    o2::its::GeometryTGeo* GetGeom() { return geom;}
+#endif
+
+   // Local-to-global transform of a chip, as the twelve components of the 3x4
+   // affine matrix. Replaces GetGeom()->getMatrixL2G(id).GetComponents(...) so that
+   // no O2 type appears in the interface.
+   void GetL2GComponents(int chipID,
+                         double &Rxx, double &Rxy, double &Rxz, double &Tdx,
+                         double &Ryx, double &Ryy, double &Ryz, double &Tdy,
+                         double &Rzx, double &Rzy, double &Rzz, double &Tdz) const;
 
    TVector3 GToS(int chipID, double gx, double gy, double gz);
    TVector3 GToL(int chipID, double gx, double gy, double gz);
@@ -72,8 +94,8 @@ public:
    TVector3 SToG(int chipID, double s1, double s2, double s3);
    TVector3 LToG(int chipID, float lx, float ly);
    TVector3 LToS(int chipID, float lx, float ly); //not implemented LToG -> GToS
-   TVector3 NormalVector(int chipID);				// Stave plane 
-   TVector3 NormalVector_Deformation(int chipID, double ds1_0, double ds2_0, double *ds3);   			
+   TVector3 NormalVector(int chipID);				// Stave plane
+   TVector3 NormalVector_Deformation(int chipID, double ds1_0, double ds2_0, double *ds3);
    TVector3 Function_Deformation(int chipID, float lx, float ly, double ds1_0, double ds2_0, double *ds3);
 
    int GetLayer(int index) const;    /// Get chip layer, from 0
@@ -87,9 +109,28 @@ public:
    int GetChipIdInModule(int index) const;   /// Get chip number within module, from 0
 
 
-   
 private:
+#ifdef YGEOM_USE_O2
    o2::its::GeometryTGeo* geom;
+#else
+   // Cache backend. Filled from the file named by fCacheFile in the constructor.
+   // Layout mirrors tools/export_geometry_cache.C exactly.
+   struct ChipGeom {
+      double R[9];      // rotation, row-major
+      double T[3];      // translation, cm
+      int layer, halfBarrel, stave, halfStave, module;
+      int chipInModule, chipInLayer, chipInStave, chipInHalfStave;
+   };
+   std::vector<ChipGeom> fChip;
+   TString               fProvenance;
+
+   void LoadCache(const char* filename);
+   // local <-> global for one chip, using the cached rigid transform
+   void L2G(int chipID, const double loc[3], double glo[3]) const;
+   void G2L(int chipID, const double glo[3], double loc[3]) const;
+   // pixel <-> local, chip-independent segmentation arithmetic
+   static void DetectorToLocal(float row, float col, double loc[3]);
+#endif
 
 public:
    static constexpr int NCols = 1024;
@@ -108,7 +149,7 @@ public:
    static constexpr float SensorLayerThickness = 30.e-4;                                               // physical thickness of sensitive part
    static constexpr float SensorSizeCols = ActiveMatrixSizeCols + PassiveEdgeSide + PassiveEdgeSide;   // SensorSize along columns
    static constexpr float SensorSizeRows = ActiveMatrixSizeRows + PassiveEdgeTop + PassiveEdgeReadOut; // SensorSize along rows
-   
+
   //detector information
 
    static constexpr int NLayer = 7;   //layer number in ITS detector
@@ -123,15 +164,15 @@ public:
    const int StaveBoundary[NLayer + 1] = { 0, 12, 28, 48, 72, 102, 144, 192 };
    const int ReduceFraction = 1;
    const float StartAngle[7] = { 16.997 / 360 * (TMath::Pi() * 2.), 17.504 / 360 * (TMath::Pi() * 2.), 17.337 / 360 * (TMath::Pi() * 2.), 8.75 / 360 * (TMath::Pi() * 2.), 7 / 360 * (TMath::Pi() * 2.), 5.27 / 360 * (TMath::Pi() * 2.), 4.61 / 360 * (TMath::Pi() * 2.) }; //start angle of first stave in each layer
-   const float MidPointRad[7] = { 23.49, 31.586, 39.341, 197.598, 246.944, 345.348, 394.883 }; 
+   const float MidPointRad[7] = { 23.49, 31.586, 39.341, 197.598, 246.944, 345.348, 394.883 };
 
-   ClassDef(YDetectorGeometry,0)  							//Top level (or geom) structure for all classes   
+   ClassDef(YDetectorGeometry,0)  							//Top level (or geom) structure for all classes
 };
 
 namespace GEOM {
    YDetectorGeometry *GetGEOM();
    namespace Internal {
-   
+
       R__EXTERN YDetectorGeometry *yGEOMLocal;
    }
 }
