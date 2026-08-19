@@ -18,15 +18,31 @@ GEOM_FILE:path:inputs
 ALIGN_FILE:path:inputs
 PARAMS_ARCHIVE:path:inputs
 MODULE_DIR:dir:module
-STEP:int:module
-JOB_NDATA:int:job
-JOB_NEPOCH:int:job
-JOB_NCORE:int:job
-JOB_JPARALLEL:int:job
-JOB_NTRACKMAX:int:job
-JOB_DET_MAG:num:job
-JOB_PT_MIN:num:job
-JOB_PT_MAX:num:job
+FIRST_STEP:int:module
+N_STEPS:int:module
+JOB_NDATA:int:size
+JOB_NEPOCH:int:size
+JOB_NCORE:int:size
+JOB_JPARALLEL:int:size
+JOB_NTRACKMAX:int:model
+JOB_DET_MAG:num:model
+JOB_FITMODEL:int:model
+JOB_VERTEXFIT:name:model
+JOB_LEARNING_METHOD:name:model
+JOB_ETA_CONSTANT:num:learning
+JOB_ETA_SCALE:num:learning
+JOB_ETA_DETRES:num:learning
+JOB_VALID_WINDOW:num:learning
+JOB_PT_MIN:num:selection
+JOB_PT_MAX:num:selection
+JOB_CHI_IB:num:selection
+JOB_CHI_OB:num:selection
+JOB_CHI_IB_TRAIN:num:selection
+JOB_CHI_OB_TRAIN:num:selection
+JOB_TRACK_REJECT:num:selection
+JOB_IP_RANGE_R:num:selection
+JOB_IP_RANGE_Z:num:selection
+JOB_MIN_CLUSTER:int:selection
 OUTPUT_DIR:dir:output
 JOB_TAG:name:output
 ROOTSYS_OVERRIDE:dir:env
@@ -42,6 +58,16 @@ rc_die()   { echo "runconf: $*" >&2; return 1; }
 # more than these, so it is edited in place; YMLPParallel.h is exactly four
 # defines and is regenerated whole.
 RC_DETCONST="Ymlp/inc/DetectorConstant.h"
+# eta and the gradient clip are plain globals in a source file, not macros,
+# so the job's own copy of this .cxx is patched too. That costs nothing at
+# run time: run_train_circle.C includes YAlignment.cxx directly, so cling
+# reinterprets the source on every run and there is nothing to rebuild.
+RC_MLPSRC="Ymlp/src/YMultiLayerPerceptron.cxx"
+# The learning method and the source tree name are arguments in the driver.
+RC_DRIVER="run_train_circle.C"
+
+# The learning methods YMultiLayerPerceptron.h:505 declares.
+RC_METHODS="kStochastic kBatch kBatchDetectorUnitUser kSteepestDescent kRibierePolak kFletcherReeves kBFGS kOffsetTuneByMean"
 
 # --- location -------------------------------------------------------------
 
@@ -94,13 +120,25 @@ rc_derive() {
   esac
 
   RC_JOB_DIR="$RC_OUTPUT/$JOB_TAG"
-  RC_SEED_STEP=$(( STEP - 1 ))
+  RC_SEED_STEP=$(( FIRST_STEP - 1 ))
+  RC_LAST_STEP=$(( FIRST_STEP + N_STEPS - 1 ))
   RC_SEED_DIR="$RC_JOB_DIR/MLPTrain_Step${RC_SEED_STEP}"
   RC_LOG="$RC_JOB_DIR/run.log"
   RC_MANIFEST="$RC_JOB_DIR/run_console_manifest.txt"
+  RC_RUNNER="$RC_JOB_DIR/run_steps.sh"
+  # The loop writes the step it is on here, so status can answer "3 of 10"
+  # after the window has been closed and reopened.
+  RC_PROGRESS="$RC_JOB_DIR/run.step"
 
   rc_inspect_module
-  RC_EST_MIN=$(rc_estimate "$JOB_NDATA" "$JOB_NEPOCH")
+
+  # eta as the module computes it, so the window never shows a number the
+  # run will not use.
+  RC_ETA=$(awk -v c="$JOB_ETA_CONSTANT" -v s="$JOB_ETA_SCALE" -v d="$JOB_ETA_DETRES" \
+             'BEGIN{ printf "%.6g", c * s * (d*1e-4)^2 }')
+
+  RC_EST_STEP=$(rc_estimate "$JOB_NDATA" "$JOB_NEPOCH")
+  RC_EST_MIN=$(awk -v m="$RC_EST_STEP" -v n="$N_STEPS" 'BEGIN{printf "%.0f", m*n}')
 }
 
 # --- module inspection ----------------------------------------------------
@@ -177,7 +215,8 @@ rc_validate() {
           echo "  $k: expected a whole number, got '$v'" >&2; bad=1
         fi ;;
       num)
-        if ! echo "$v" | grep -qE '^-?[0-9]+([.][0-9]+)?$'; then
+        # Scientific notation is accepted: JOB_ETA_SCALE ships as 1.0e-7.
+        if ! echo "$v" | grep -qE '^-?[0-9]+([.][0-9]*)?([eE][-+]?[0-9]+)?$'; then
           echo "  $k: expected a number, got '$v'" >&2; bad=1
         fi ;;
     esac
@@ -192,8 +231,42 @@ rc_validate() {
   [ $bad -eq 0 ] || return 1
 
   # Step 0 hands LoadUpdateSensorList an empty name and errors out, so the
-  # seed always lands in a real MLPTrain_Step<STEP-1>.
-  [ "$STEP" -ge 1 ] || { echo "  STEP must be at least 1; at step 0 LoadUpdateSensorList gets an empty name" >&2; bad=1; }
+  # seed always lands in a real MLPTrain_Step<FIRST_STEP-1>.
+  [ "$FIRST_STEP" -ge 1 ] || { echo "  FIRST_STEP must be at least 1; at step 0 LoadUpdateSensorList gets an empty name" >&2; bad=1; }
+  [ "$N_STEPS" -ge 1 ]    || { echo "  N_STEPS must be at least 1" >&2; bad=1; }
+
+  case "$JOB_FITMODEL" in
+    1|2) ;;
+    *) echo "  JOB_FITMODEL must be 1 (Line) or 2 (Circle), got '$JOB_FITMODEL'" >&2; bad=1 ;;
+  esac
+  case "$JOB_VERTEXFIT" in
+    kTRUE|kFALSE) ;;
+    *) echo "  JOB_VERTEXFIT must be kTRUE or kFALSE, got '$JOB_VERTEXFIT'" >&2; bad=1 ;;
+  esac
+  case " $RC_METHODS " in
+    *" $JOB_LEARNING_METHOD "*) ;;
+    *) echo "  JOB_LEARNING_METHOD '$JOB_LEARNING_METHOD' is not one of: $RC_METHODS" >&2; bad=1 ;;
+  esac
+
+  # A zero or negative learning rate would train nothing while looking busy.
+  awk -v e="$RC_ETA" 'BEGIN{exit !(e+0 > 0)}' || {
+    echo "  the eta constants give $RC_ETA; it must be above zero" >&2; bad=1; }
+  awk -v w="$JOB_VALID_WINDOW" 'BEGIN{exit !(w+0 > 0)}' || {
+    echo "  JOB_VALID_WINDOW must be above zero" >&2; bad=1; }
+
+  # The training thresholds are meant to be tighter than the cost ones. This
+  # is a warning in spirit, but the pair is easy to swap by accident.
+  awk -v a="$JOB_CHI_IB_TRAIN" -v b="$JOB_CHI_IB" 'BEGIN{exit !(a+0 > b+0)}' && {
+    echo "  JOB_CHI_IB_TRAIN ($JOB_CHI_IB_TRAIN) is looser than JOB_CHI_IB ($JOB_CHI_IB); the update would accept hits the cost rejects" >&2; bad=1; }
+  awk -v a="$JOB_CHI_OB_TRAIN" -v b="$JOB_CHI_OB" 'BEGIN{exit !(a+0 > b+0)}' && {
+    echo "  JOB_CHI_OB_TRAIN ($JOB_CHI_OB_TRAIN) is looser than JOB_CHI_OB ($JOB_CHI_OB)" >&2; bad=1; }
+
+  for k in JOB_TRACK_REJECT JOB_IP_RANGE_R JOB_IP_RANGE_Z JOB_CHI_IB JOB_CHI_OB \
+           JOB_CHI_IB_TRAIN JOB_CHI_OB_TRAIN JOB_ETA_DETRES; do
+    eval "v=\$$k"
+    awk -v x="$v" 'BEGIN{exit !(x+0 > 0)}' || { echo "  $k must be above zero, got '$v'" >&2; bad=1; }
+  done
+  [ "$JOB_MIN_CLUSTER" -ge 0 ] || { echo "  JOB_MIN_CLUSTER must not be negative" >&2; bad=1; }
 
   [ "$JOB_NDATA" -ge 1 ]     || { echo "  JOB_NDATA must be at least 1" >&2; bad=1; }
   [ "$JOB_NCORE" -ge 1 ]     || { echo "  JOB_NCORE must be at least 1" >&2; bad=1; }
@@ -241,10 +314,47 @@ rc_patch_define() {   # file name value
 
 rc_patch_detconst() {
   local f="$1"
-  rc_patch_define "$f" nTrackMax    "$JOB_NTRACKMAX"
-  rc_patch_define "$f" DET_MAG      "$JOB_DET_MAG"
-  rc_patch_define "$f" Update_pTmin "$JOB_PT_MIN"
-  rc_patch_define "$f" Update_pTmax "$JOB_PT_MAX"
+  rc_patch_define "$f" nTrackMax             "$JOB_NTRACKMAX"
+  rc_patch_define "$f" DET_MAG               "$JOB_DET_MAG"
+  rc_patch_define "$f" FITMODEL              "$JOB_FITMODEL"
+  rc_patch_define "$f" VERTEXFIT             "$JOB_VERTEXFIT"
+  rc_patch_define "$f" Update_pTmin          "$JOB_PT_MIN"
+  rc_patch_define "$f" Update_pTmax          "$JOB_PT_MAX"
+  rc_patch_define "$f" RANGE_CHI_IB          "$JOB_CHI_IB"
+  rc_patch_define "$f" RANGE_CHI_OB          "$JOB_CHI_OB"
+  rc_patch_define "$f" RANGE_CHI_IB_TRAINING "$JOB_CHI_IB_TRAIN"
+  rc_patch_define "$f" RANGE_CHI_OB_TRAINING "$JOB_CHI_OB_TRAIN"
+  rc_patch_define "$f" TrackRejection        "$JOB_TRACK_REJECT"
+  rc_patch_define "$f" RANGE_IMPACTPARAMS_R  "$JOB_IP_RANGE_R"
+  rc_patch_define "$f" RANGE_IMPACTPARAMS_Z  "$JOB_IP_RANGE_Z"
+  rc_patch_define "$f" Min_Cluster_by_Sensor "$JOB_MIN_CLUSTER"
+}
+
+# One file-scope `double NAME = value;` in a source file. Anchored at the
+# start of the line so the commented-out duplicates a few lines below
+# (`//double UpdateConstant = 4.0;`) are left alone.
+rc_patch_global() {   # file name value
+  local f="$1" n="$2" v="$3"
+  [ -f "$f" ] || return 0
+  sed -i "s|^\(double[[:space:]][[:space:]]*$n[[:space:]]*=[[:space:]]*\)[^;]*;|\1$v;|" "$f"
+}
+
+rc_patch_mlpsrc() {
+  local f="$1"
+  rc_patch_global "$f" UpdateConstant "$JOB_ETA_CONSTANT"
+  rc_patch_global "$f" UpdateScale    "$JOB_ETA_SCALE"
+  rc_patch_global "$f" DETRES         "$JOB_ETA_DETRES"
+  rc_patch_global "$f" ValidWindow    "$JOB_VALID_WINDOW"
+}
+
+# The driver names the learning method and the source tree. Patching it is
+# what makes DATA_TREE mean anything: before this the key was checked by
+# doctor and then ignored, because SetSourceTreeName was hardcoded.
+rc_patch_driver() {
+  local f="$1"
+  [ -f "$f" ] || return 0
+  sed -i "s|\(ELearningMethod method = YMultiLayerPerceptron::\)k[A-Za-z]*|\1$JOB_LEARNING_METHOD|" "$f"
+  sed -i "s|\(SetSourceTreeName(\"\)[^\"]*\(\")\)|\1$DATA_TREE\2|" "$f"
 }
 
 # --- environment checks ---------------------------------------------------
@@ -361,14 +471,16 @@ rc_print() {
     printf '  %-24s %s\n' "$k" "$v"
   done
   printf '\n[derived]\n'
-  printf '  %-24s %s\n' "module"          "$RC_MODULE"
+  printf '  %-24s %s\n' "steps"            "$FIRST_STEP .. $RC_LAST_STEP ($N_STEPS)"
+  printf '  %-24s %s\n' "eta (start)"      "$RC_ETA"
+  printf '  %-24s %s\n' "module"           "$RC_MODULE"
   printf '  %-24s %s\n' "geometry backend" \
     "$( [ "$RC_O2_REQUIRED" -eq 1 ] && echo 'O2 required' || echo 'cache-backed (no O2)' )"
-  printf '  %-24s %s\n' "job directory"   "$RC_JOB_DIR"
-  printf '  %-24s %s\n' "seed unpacks to" "MLPTrain_Step${RC_SEED_STEP}/"
-  printf '  %-24s %s\n' "ndf per event"   "$(( 12 * JOB_NTRACKMAX + 1 ))"
+  printf '  %-24s %s\n' "job directory"    "$RC_JOB_DIR"
+  printf '  %-24s %s\n' "seed unpacks to"  "MLPTrain_Step${RC_SEED_STEP}/"
+  printf '  %-24s %s\n' "ndf per event"    "$(( 12 * JOB_NTRACKMAX + 1 ))"
   printf '  %-24s %s\n' "estimated runtime" \
-    "$RC_EST_MIN min ($(awk -v m="$RC_EST_MIN" 'BEGIN{printf "%.1f", m/60}') h)"
+    "$RC_EST_MIN min ($(awk -v m="$RC_EST_MIN" 'BEGIN{printf "%.1f", m/60}') h) total; $RC_EST_STEP min per step"
   printf '  %-24s %s\n' "module now holds" \
     "nDATA=$RC_MOD_NDATA nEPOCH=$RC_MOD_NEPOCH nTrackMax=$RC_MOD_NTRACKMAX DET_MAG=$RC_MOD_DET_MAG"
 }
@@ -436,7 +548,7 @@ rc_compose() {
   _m "composed  $(date '+%Y-%m-%d %H:%M:%S')"
   _m "module    $RC_MODULE"
   _m "job       $RC_JOB_DIR"
-  _m "step      $STEP"
+  _m "steps     $FIRST_STEP..$RC_LAST_STEP ($N_STEPS)"
 
   for d in $RC_COPY_TREE; do
     [ -d "$RC_MODULE/$d" ] || continue
@@ -458,8 +570,9 @@ rc_compose() {
     _m "link      ${pair#*:} -> $src"
   done
 
-  # Seed parameters land in MLPTrain_Step<STEP-1>, which is where
-  # run_train_circle looks for SetPrevUSL and SetPrevWeight.
+  # Seed parameters land in MLPTrain_Step<FIRST_STEP-1>, which is where
+  # run_train_circle looks for SetPrevUSL and SetPrevWeight. Later steps need
+  # no seeding: step N reads MLPTrain_Step<N-1>, which step N-1 just wrote.
   rm -rf "$RC_SEED_DIR"; mkdir -p "$RC_SEED_DIR"
   src=$(rc_resolve "$PARAMS_ARCHIVE") || { rc_die "cannot resolve PARAMS_ARCHIVE"; return 1; }
   if [ -d "$src" ]; then
@@ -477,15 +590,67 @@ rc_compose() {
   rc_gen_ymlpparallel "$RC_JOB_DIR/YMLPParallel.h"
   _m "YMLPParallel.h  jparallel=$JOB_JPARALLEL nCORE=$JOB_NCORE nDATA=$JOB_NDATA nEPOCH=$JOB_NEPOCH"
   rc_patch_detconst "$RC_JOB_DIR/$RC_DETCONST"
-  _m "DetectorConstant.h  nTrackMax=$JOB_NTRACKMAX DET_MAG=$JOB_DET_MAG pT=[$JOB_PT_MIN,$JOB_PT_MAX]"
+  _m "DetectorConstant.h  nTrackMax=$JOB_NTRACKMAX DET_MAG=$JOB_DET_MAG FITMODEL=$JOB_FITMODEL VERTEXFIT=$JOB_VERTEXFIT"
+  _m "                    pT=[$JOB_PT_MIN,$JOB_PT_MAX] chi_cost=[$JOB_CHI_IB,$JOB_CHI_OB] chi_train=[$JOB_CHI_IB_TRAIN,$JOB_CHI_OB_TRAIN]"
+  _m "                    TrackRejection=$JOB_TRACK_REJECT ip=[$JOB_IP_RANGE_R,$JOB_IP_RANGE_Z] minCluster=$JOB_MIN_CLUSTER"
 
-  # batch_train names the step it runs.
-  if [ -f "$RC_JOB_DIR/batch_train" ]; then
-    sed -i "s|run_train_circle\.C(\([[:space:]]*\)[0-9][0-9]*\([[:space:]]*\))|run_train_circle.C(\1$STEP\2)|" \
-      "$RC_JOB_DIR/batch_train"
-    _m "batch_train  step $STEP"
-  fi
+  rc_patch_mlpsrc "$RC_JOB_DIR/$RC_MLPSRC"
+  _m "YMultiLayerPerceptron.cxx  eta=$RC_ETA (const=$JOB_ETA_CONSTANT scale=$JOB_ETA_SCALE DETRES=$JOB_ETA_DETRES) ValidWindow=$JOB_VALID_WINDOW"
+
+  rc_patch_driver "$RC_JOB_DIR/$RC_DRIVER"
+  _m "run_train_circle.C  method=$JOB_LEARNING_METHOD tree=$DATA_TREE"
+
+  rc_gen_runner
+  _m "run_steps.sh  steps $FIRST_STEP..$RC_LAST_STEP ($N_STEPS)"
   unset -f _m
+}
+
+# --- the multi-step runner -------------------------------------------------
+
+# Written into the job directory rather than run inline, so the loop survives
+# the shell that launched it and status can read its progress. Mirrors
+# process_all_train.sh: rewrite batch_train for the step, run it, file the log,
+# archive the step.
+rc_gen_runner() {
+  cat > "$RC_RUNNER" <<EOF
+#!/bin/bash
+# Generated by config/runctl.sh compose. Regenerated on every compose.
+cd "\$(dirname "\$0")" || exit 1
+
+first=$FIRST_STEP
+last=$RC_LAST_STEP
+
+for step in \$(seq \$first \$last); do
+  echo "=== step \$step of \$last (\$((step - first + 1)) / $N_STEPS) \$(date '+%Y-%m-%dT%H:%M:%S') ==="
+  echo "\$step \$first \$last" > run.step
+
+  echo 'gROOT->ProcessLine(".L ./Ymlp/src/YDetectorGeometry.cxx");'  > batch_train
+  echo "gROOT->ProcessLine(\".x run_train_circle.C(\$step)\");"  >> batch_train
+
+  root -l -b < batch_train > train.log 2>&1
+  rc=\$?
+
+  if [ -d "MLPTrain_Step\$step" ]; then
+    mv train.log "MLPTrain_Step\$step/train_done.log"
+    tar -zcf "MLPTrain_Step\$step.tgz" "MLPTrain_Step\$step"
+  else
+    echo "step \$step produced no MLPTrain_Step\$step/ -- stopping"
+    cat train.log | tail -40
+    echo "STEPFAIL \$step" > run.step
+    exit 1
+  fi
+
+  if [ \$rc -ne 0 ]; then
+    echo "step \$step exited \$rc -- stopping"
+    echo "STEPFAIL \$step" > run.step
+    exit \$rc
+  fi
+done
+
+echo "DONE \$last" > run.step
+echo "=== all $N_STEPS step(s) complete \$(date '+%Y-%m-%dT%H:%M:%S') ==="
+EOF
+  chmod +x "$RC_RUNNER"
 }
 
 # --- launching ------------------------------------------------------------
@@ -504,7 +669,7 @@ rc_running_pids() {
 rc_run() {
   local p
   [ -d "$RC_JOB_DIR" ] || { rc_die "no job directory; run 'runctl.sh compose' first"; return 1; }
-  [ -f "$RC_JOB_DIR/batch_train" ] || { rc_die "no batch_train in $RC_JOB_DIR"; return 1; }
+  [ -x "$RC_RUNNER" ]  || { rc_die "no runner at $RC_RUNNER; compose again"; return 1; }
   p=$(rc_running_pids)
   [ -n "$p" ] && { rc_die "a job is already running here (pid $p)"; return 1; }
 
@@ -516,14 +681,30 @@ rc_run() {
   command -v root >/dev/null 2>&1 || { rc_die "root is not on PATH"; return 1; }
 
   echo "START $(date '+%Y-%m-%dT%H:%M:%S')" > "$RC_LOG"
-  # setsid so the job outlives the shell that started it -- these run for hours.
-  ( cd "$RC_JOB_DIR" && setsid nohup root -l -b -q batch_train >> "$RC_LOG" 2>&1 &
+  rm -f "$RC_PROGRESS"
+  # setsid so the run outlives the shell that started it -- these take hours,
+  # and with N_STEPS above 1 considerably longer.
+  ( setsid nohup "$RC_RUNNER" >> "$RC_LOG" 2>&1 &
     echo $! > "$(rc_pidfile)" )
   sleep 1
   p=$(cat "$(rc_pidfile)" 2>/dev/null)
   echo "started pid $p"
+  echo "steps   $FIRST_STEP..$RC_LAST_STEP ($N_STEPS)"
   echo "log     $RC_LOG"
-  echo "expect  ~$RC_EST_MIN min ($(awk -v m="$RC_EST_MIN" 'BEGIN{printf "%.1f", m/60}') h)"
+  echo "expect  ~$RC_EST_MIN min ($(awk -v m="$RC_EST_MIN" 'BEGIN{printf "%.1f", m/60}') h) for all steps"
+}
+
+# Where the loop has got to, read from the file the runner writes, so the
+# answer survives closing and reopening the window.
+rc_progress() {
+  local a b c
+  [ -r "$RC_PROGRESS" ] || { echo "not started"; return 0; }
+  read -r a b c < "$RC_PROGRESS"
+  case "$a" in
+    DONE)     echo "all steps complete (last $b)" ;;
+    STEPFAIL) echo "FAILED on step $b" ;;
+    *)        echo "step $a of $c" ;;
+  esac
 }
 
 rc_status() {
@@ -531,10 +712,12 @@ rc_status() {
   p=$(rc_running_pids)
   if [ -n "$p" ]; then
     echo "running   pid $p"
+    echo "progress  $(rc_progress)"
     echo "job       $RC_JOB_DIR"
     [ -r "$RC_LOG" ] && echo "log       $RC_LOG ($(wc -l < "$RC_LOG") lines)"
   elif [ -r "$RC_LOG" ]; then
     echo "not running"
+    echo "progress  $(rc_progress)"
     echo "log       $RC_LOG"
     tail -3 "$RC_LOG" | sed 's/^/  /'
   else
@@ -552,20 +735,23 @@ rc_stop() {
 # --- outputs --------------------------------------------------------------
 
 rc_outputs() {
-  local d n
-  d="$RC_JOB_DIR/MLPTrain_Step${STEP}"
-  if [ ! -d "$d" ]; then
-    echo "no MLPTrain_Step${STEP}/ in $RC_JOB_DIR yet"
-    [ -d "$RC_JOB_DIR" ] && ls -1 "$RC_JOB_DIR" | sed 's/^/  /'
+  local step d n any=0
+  for step in $(seq "$FIRST_STEP" "$RC_LAST_STEP"); do
+    d="$RC_JOB_DIR/MLPTrain_Step${step}"
+    [ -d "$d" ] || continue
+    any=1
+    n=$(find "$d" -type f 2>/dev/null | wc -l)
+    echo "MLPTrain_Step${step}/  ($n files)"
+    find "$d" -type f \( -name '*.root' -o -name '*.log' \) 2>/dev/null |
+      sort | while read -r f; do
+        printf '    %10s  %s\n' "$(stat -c%s "$f" 2>/dev/null)" "${f#$d/}"
+      done
+  done
+  if [ "$any" -eq 0 ]; then
+    echo "no MLPTrain_Step${FIRST_STEP}..${RC_LAST_STEP}/ in $RC_JOB_DIR yet"
+    [ -d "$RC_JOB_DIR" ] && ls -1 "$RC_JOB_DIR" | sed 's|^|  |'
     return 1
   fi
-  echo "$d"
-  find "$d" -type f \( -name '*.root' -o -name '*.txt' -o -name '*.log' \) 2>/dev/null |
-    sort | while read -r f; do
-      printf '  %10s  %s\n' "$(stat -c%s "$f" 2>/dev/null)" "${f#$d/}"
-    done
-  n=$(find "$d" -type f 2>/dev/null | wc -l)
-  echo "  ($n files)"
 }
 
 # Hands a finished run to the explorer payload extractor. That tool is Python
@@ -580,12 +766,12 @@ rc_reduce() {
     echo "The run itself is unaffected; copy $RC_JOB_DIR to a machine with python3 and uproot." >&2
     return 1; }
   python3 "$ex" \
-    --step-dir     "$RC_JOB_DIR/MLPTrain_Step${STEP}" \
+    --step-dir     "$RC_JOB_DIR/MLPTrain_Step${RC_LAST_STEP}" \
     --epoch        -1 \
     --log          "$RC_LOG" \
     --geometry     "$RC_JOB_DIR/geometry/its2_geom.root" \
     --weights      "$RC_JOB_DIR/NetworkParameters/weights.txt" \
-    --seed-weights "$RC_SEED_DIR/weights/weights.txt" \
+    --seed-weights "$RC_JOB_DIR/MLPTrain_Step$(( RC_LAST_STEP - 1 ))/weights/weights.txt" \
     --usl          "$RC_JOB_DIR/UpdateSensorsList.txt" \
     --all-epochs \
     --out          "$out"

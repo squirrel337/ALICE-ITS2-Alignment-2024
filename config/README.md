@@ -50,16 +50,65 @@ compose into a batch script without parsing their output.
 
 ## The window
 
-`runctl.sh ui` opens a ROOT GUI with four tabs — Inputs, Module, Job, Run —
-an action bar, and a log pane. Path fields have a **Browse…** button: files
-use ROOT's file dialog, directories use the same `TBrowser`-style tree the
-Manager uses.
+`runctl.sh ui` opens a ROOT GUI with six tabs — Inputs, Module, Job,
+Learning, Selection, Run — an action bar, and a log pane. Path fields have a
+**Browse…** button: files use ROOT's file dialog, directories use the same
+`TBrowser`-style tree the Manager uses.
 
 The window never writes the configuration file, never composes and never
 launches anything itself. Every button shells out to `runctl.sh`, so the
 file format, the validation rules and the job layout live in one place and
 the GUI cannot drift away from the command line. Whatever the window can
 do, you can do over ssh with no display.
+
+## Steps
+
+`FIRST_STEP` and `N_STEPS` set a range. Step N reads `MLPTrain_Step<N-1>/`
+and writes `MLPTrain_Step<N>/`, so the chain continues on its own: only the
+first step needs the seed archive. Compose writes `run_steps.sh` into the job
+directory and `run` launches that, detached; it rewrites `batch_train` per
+step, files `train.log` into the step directory and tars the result, the same
+way `process_all_train.sh` does.
+
+If a step fails the run stops there rather than feeding a broken step into the
+next one. `status` reads `run.step`, so it can answer "step 3 of 10" even
+after the window has been closed and reopened.
+
+## The learning rate
+
+eta is not a `#define`. `YMultiLayerPerceptron.cxx` computes it in the
+constructor from three plain globals:
+
+```
+eta = JOB_ETA_CONSTANT * JOB_ETA_SCALE * (JOB_ETA_DETRES * 1e-4)^2
+```
+
+so the console patches that **source file** in the job copy, not a header.
+Nothing is rebuilt for it: `run_train_circle.C` includes `YAlignment.cxx`
+directly, so cling reinterprets the source on every run.
+
+**This is the starting value.** The module backtracks on its own: if the cost
+rises above `training_Epast * 1.005` or `Init_training_E * 1.02`, it reloads
+the previous epoch's weights and divides eta by `sqrt(10)`, up to four times.
+The eta in the log will differ from the configured one whenever that has
+happened — that is the module working, not the setting being ignored.
+
+`JOB_VALID_WINDOW` sits beside it and does a related job: it clamps how much
+one hit's residual may contribute to the update.
+
+## Selection
+
+Two pairs of chi thresholds, deliberately different: `JOB_CHI_IB` /
+`JOB_CHI_OB` decide which hits spoil the **cost**, `JOB_CHI_IB_TRAIN` /
+`JOB_CHI_OB_TRAIN` which hits spoil the **weight update**. `validate` refuses
+a training threshold looser than its cost counterpart, since that would let
+the update accept hits the cost has already rejected.
+
+`JOB_IP_RANGE_R` and `JOB_IP_RANGE_Z` are the impact-parameter acceptance. In
+this legacy tree they decide how much the layer-0 defect costs: a track whose
+reference point was never written lands far outside and is dropped from both
+the cost and the update. Widening them is the only lever available here, short
+of patching the module.
 
 ## What compose actually builds
 
@@ -71,9 +120,11 @@ do, you can do over ssh with no display.
   is ~800 MB, and copying it per job would fill the disk for nothing
 - the seed archive unpacked into `MLPTrain_Step<STEP-1>/`, which is where
   `run_train_circle.C` looks for `SetPrevUSL` and `SetPrevWeight`
-- a regenerated `YMLPParallel.h` (it is exactly four defines) and an
-  in-place patch of `nTrackMax`, `DET_MAG`, `Update_pTmin` and
-  `Update_pTmax` in that job's own `DetectorConstant.h`
+- a regenerated `YMLPParallel.h` (it is exactly four defines), an in-place
+  patch of fourteen `#define`s in that job's own `DetectorConstant.h`, the
+  four eta/clip globals in its `YMultiLayerPerceptron.cxx`, and the learning
+  method and tree name in its `run_train_circle.C`
+- `run_steps.sh`, the generated step loop
 
 **The module checkout is only ever read.** That is what lets this drive a
 tree that is meant to stay untouched, and it is worth keeping true.
