@@ -1,0 +1,747 @@
+<title>Alignment Platform Feasibility</title>
+
+<style>
+:root {
+  --ground:      #F1F4F6;
+  --surface:     #FFFFFF;
+  --surface-2:   #E7ECF0;
+  --ink:         #121A21;
+  --ink-2:       #4B5A67;
+  --ink-3:       #77848F;
+  --rule:        #D4DBE2;
+  --rule-strong: #AFBBC6;
+  --accent:      #0D6B77;
+  --accent-soft: #D9EDEF;
+  --signal:      #9C5605;
+  --signal-soft: #F6E8D4;
+  --reject:      #962A39;
+  --reject-soft: #F4DCDF;
+  --go:          #2F6B3A;
+  --go-soft:     #DDEDDF;
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, "Bitstream Charter", Georgia, serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #0E1317;
+    --surface:     #161C21;
+    --surface-2:   #1D252B;
+    --ink:         #E2E8ED;
+    --ink-2:       #A2AFBA;
+    --ink-3:       #7B8894;
+    --rule:        #273038;
+    --rule-strong: #3C4852;
+    --accent:      #4EBDCA;
+    --accent-soft: #10333A;
+    --signal:      #DFA24C;
+    --signal-soft: #33270F;
+    --reject:      #E8808F;
+    --reject-soft: #391B21;
+    --go:          #7FC08C;
+    --go-soft:     #17301C;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:      #0E1317;
+  --surface:     #161C21;
+  --surface-2:   #1D252B;
+  --ink:         #E2E8ED;
+  --ink-2:       #A2AFBA;
+  --ink-3:       #7B8894;
+  --rule:        #273038;
+  --rule-strong: #3C4852;
+  --accent:      #4EBDCA;
+  --accent-soft: #10333A;
+  --signal:      #DFA24C;
+  --signal-soft: #33270F;
+  --reject:      #E8808F;
+  --reject-soft: #391B21;
+  --go:          #7FC08C;
+  --go-soft:     #17301C;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0 clamp(1rem, 4vw, 3rem) 6rem;
+}
+
+.page { max-width: 1180px; margin: 0 auto; }
+
+.masthead { padding: clamp(2.5rem, 6vw, 4rem) 0 1.8rem; border-bottom: 2px solid var(--ink); }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--accent); margin: 0 0 1.1rem;
+}
+.masthead h1 {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: clamp(2rem, 5vw, 3.05rem); line-height: 1.08; letter-spacing: -0.015em;
+  text-wrap: balance; margin: 0 0 1rem; max-width: 20ch;
+}
+.standfirst { font-size: clamp(1.02rem, 1.6vw, 1.16rem); color: var(--ink-2); max-width: 64ch; margin: 0; }
+
+.verdict {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin: 2rem 0 0;
+}
+.verdict div { background: var(--ground); padding: 0.75rem 0.9rem; }
+.verdict dt {
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0 0 0.3rem;
+}
+.verdict dd { margin: 0; font-size: 0.88rem; color: var(--ink); }
+
+.shell { padding-top: 2.5rem; }
+@media (min-width: 1040px) {
+  .shell { display: grid; grid-template-columns: 195px minmax(0, 1fr); gap: 3.2rem; align-items: start; }
+  .rail { position: sticky; top: 1.5rem; }
+}
+.rail ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--rule); }
+.rail a {
+  display: block; padding: 0.42rem 0 0.42rem 0.9rem; margin-left: -1px;
+  border-left: 2px solid transparent; color: var(--ink-2); text-decoration: none;
+  font-size: 0.83rem; line-height: 1.35;
+}
+.rail a:hover, .rail a:focus-visible { color: var(--accent); border-left-color: var(--accent); }
+.rail .num { font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-3); margin-right: 0.45rem; }
+.rail .rail-title {
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3); padding: 0 0 0.7rem 0.9rem; margin: 0;
+}
+
+main { min-width: 0; }
+section { margin: 0 0 3.6rem; scroll-margin-top: 1.5rem; }
+
+h2 {
+  font-family: var(--font-display); font-size: clamp(1.45rem, 2.5vw, 1.9rem);
+  font-weight: 600; line-height: 1.16; letter-spacing: -0.01em; text-wrap: balance;
+  margin: 0 0 0.4rem; padding-top: 0.9rem; border-top: 1px solid var(--rule-strong);
+}
+h2 .stage {
+  display: block; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--accent); font-weight: 400; margin-bottom: 0.5rem;
+}
+h3 { font-size: 0.95rem; font-weight: 650; margin: 2rem 0 0.6rem; }
+h4 {
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 400; margin: 1.5rem 0 0.5rem;
+}
+p { margin: 0 0 1rem; max-width: 68ch; }
+ul, ol.body-list { max-width: 68ch; padding-left: 1.15rem; margin: 0 0 1rem; }
+li { margin-bottom: 0.42rem; }
+a { color: var(--accent); }
+code {
+  font-family: var(--font-mono); font-size: 0.855em; background: var(--surface-2);
+  padding: 0.08em 0.34em; border-radius: 2px; overflow-wrap: anywhere;
+}
+strong { font-weight: 650; }
+.lede { font-size: 1.05rem; color: var(--ink-2); max-width: 64ch; margin-bottom: 1.5rem; }
+
+.note {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 0.85rem 1.1rem; margin: 1.5rem 0; max-width: 68ch; font-size: 0.92rem;
+}
+.note p:last-child { margin-bottom: 0; }
+.note .tag {
+  display: block; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 0.35rem;
+}
+.note.caveat { border-left-color: var(--signal); background: var(--signal-soft); }
+.note.caveat .tag { color: var(--signal); }
+.note.correct { border-left-color: var(--reject); background: var(--reject-soft); }
+.note.correct .tag { color: var(--reject); }
+
+.table-wrap { overflow-x: auto; margin: 1.4rem 0 1.8rem; border: 1px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; min-width: 600px; background: var(--surface); font-size: 0.85rem; }
+th, td { text-align: left; padding: 0.52rem 0.85rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th {
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 400;
+  background: var(--surface-2); border-bottom: 1px solid var(--rule-strong);
+}
+tbody tr:last-child td { border-bottom: none; }
+td.mono { font-family: var(--font-mono); font-size: 0.78rem; overflow-wrap: anywhere; }
+td.val { font-family: var(--font-mono); font-size: 0.78rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill {
+  display: inline-block; font-family: var(--font-mono); font-size: 0.68rem;
+  letter-spacing: 0.06em; padding: 0.1rem 0.42rem; border-radius: 2px; white-space: nowrap;
+}
+.pill.ok { background: var(--go-soft); color: var(--go); }
+.pill.warn { background: var(--signal-soft); color: var(--signal); }
+.pill.hard { background: var(--reject-soft); color: var(--reject); }
+
+.fig { margin: 2rem 0 2.4rem; display: flex; flex-direction: column; gap: 0.8rem; }
+.fig-frame { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); padding: 1.2rem; }
+.fig svg { display: block; width: 100%; height: auto; color: var(--ink); }
+.fig figcaption { font-size: 0.84rem; color: var(--ink-2); max-width: 74ch; line-height: 1.55; }
+.fig figcaption b {
+  font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent); font-weight: 400; margin-right: 0.5rem;
+}
+
+.d-box  { fill: var(--surface);  stroke: var(--rule-strong); stroke-width: 1.3; }
+.d-fill { fill: var(--surface-2); stroke: var(--rule-strong); stroke-width: 1.3; }
+.d-acc  { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; }
+.d-go   { fill: var(--go-soft); stroke: var(--go); stroke-width: 1.5; }
+.d-sig  { fill: var(--signal-soft); stroke: var(--signal); stroke-width: 1.5; }
+.d-rej  { fill: var(--reject-soft); stroke: var(--reject); stroke-width: 1.5; }
+.d-ext  { fill: none; stroke: var(--rule-strong); stroke-width: 1.3; stroke-dasharray: 5 4; }
+
+.d-t   { fill: var(--ink); font-family: var(--font-body); font-size: 13px; }
+.d-t.b { font-weight: 650; }
+.d-m   { fill: var(--ink-2); font-family: var(--font-mono); font-size: 11px; }
+.d-cap { fill: var(--ink-3); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; }
+.d-gt  { fill: var(--go); font-family: var(--font-mono); font-size: 11px; }
+.d-st  { fill: var(--signal); font-family: var(--font-mono); font-size: 11px; }
+.d-rt  { fill: var(--reject); font-family: var(--font-mono); font-size: 11px; }
+.d-at  { fill: var(--accent); font-family: var(--font-mono); font-size: 11px; }
+
+.d-l  { fill: none; stroke: var(--rule-strong); stroke-width: 1.4; }
+.d-lg { fill: none; stroke: var(--go); stroke-width: 1.5; }
+.d-lr { fill: none; stroke: var(--reject); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.h-grey { fill: var(--rule-strong); }
+.h-go   { fill: var(--go); }
+.h-rej  { fill: var(--reject); }
+
+footer {
+  border-top: 2px solid var(--ink); padding-top: 1.4rem; margin-top: 1rem;
+  font-size: 0.83rem; color: var(--ink-3); max-width: 70ch;
+}
+a:focus-visible, .rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">ALICE ITS2 &middot; Feasibility assessment</p>
+  <h1>Alignment Platform Feasibility</h1>
+  <p class="standfirst">
+    Whether the ITS2 alignment module can be driven and inspected through a web interface,
+    assessed against the actual output artifacts rather than in principle. The short answer is
+    yes, and the binding constraint is not the one you would expect.
+  </p>
+  <dl class="verdict">
+    <div><dt>Inspection &amp; sharing</dt><dd><span class="pill ok">feasible now</span> no backend required</dd></div>
+    <div><dt>Campaign monitoring</dt><dd><span class="pill ok">feasible</span> one Python service</dd></div>
+    <div><dt>Campaign control</dt><dd><span class="pill warn">feasible, invasive</span> config refactor first</dd></div>
+    <div><dt>Hard blocker</dt><dd><span class="pill hard">none found</span></dd></div>
+  </dl>
+</header>
+
+<div class="shell">
+
+  <nav class="rail" aria-label="Sections">
+    <p class="rail-title">Contents</p>
+    <ol>
+      <li><a href="#verdict"><span class="num">00</span>Verdict</a></li>
+      <li><a href="#inventory"><span class="num">01</span>Data inventory</a></li>
+      <li><a href="#readability"><span class="num">02</span>What is readable without ROOT</a></li>
+      <li><a href="#panels"><span class="num">03</span>What the interface should show</a></li>
+      <li><a href="#tiers"><span class="num">04</span>Three tiers</a></li>
+      <li><a href="#blocker"><span class="num">05</span>The real blocker</a></li>
+      <li><a href="#recommend"><span class="num">06</span>Recommended path</a></li>
+      <li><a href="#open"><span class="num">07</span>Open questions</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+<!-- 00 -->
+<section id="verdict">
+  <h2><span class="stage">Section 00</span>Verdict</h2>
+
+  <p class="lede">
+    A platform is feasible at every tier examined. The obstacle is not data access, not volume,
+    and not the ROOT format &mdash; it is that the module's configuration lives in preprocessor
+    defines, which only matters if the interface is meant to <em>launch</em> runs rather than
+    inspect them.
+  </p>
+
+  <p>
+    Three things make this easier than it looks. The parameter outputs are plain whitespace-delimited
+    text, small enough to ship whole to a browser. The per-track monitoring tree is a plain POD
+    struct rather than a ROOT class, so it is readable in pure Python. And the visualization
+    vocabulary already exists in the trending macros &mdash; roughly 790 lines of ROOT plotting that
+    a dashboard would be porting, not inventing.
+  </p>
+
+  <div class="note correct">
+    <span class="tag">Correction to an earlier assessment</span>
+    <p>
+      My first read of this flagged the <code>Residual_Monitor_*.root</code> tree as needing a
+      ROOT-side exporter because it holds a custom class. That was wrong.
+      <code>YResidualMonitor</code> is declared in <code>YMultiLayerPerceptron.h</code> as a plain
+      <code>struct</code> &mdash; no <code>ClassDef</code>, no <code>TObject</code> inheritance, no
+      <code>std::vector</code> members. Its fields are scalars and fixed-size arrays of length
+      <code>nLAYER + 1 = 8</code>, which ROOT splits into flat sub-branches that
+      <code>uproot</code> reads directly. This removes the ROOT dependency from what would have
+      been the most valuable data source, and it changes the recommended architecture.
+    </p>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="inventory">
+  <h2><span class="stage">Section 01</span>Data inventory</h2>
+
+  <p>
+    Measured on the deployed parameter set committed in this repository.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Artifact</th><th>Shape</th><th class="mono">Size</th><th>Carries</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="mono">weights.txt</td>
+          <td class="val">24 120 &times; 18</td><td class="val">4.4 MB</td>
+          <td>ChipID, 5 neuron offsets, 6 synapse weights, <code>aR[3]</code>, <code>aT[3]</code> &mdash; the alignment itself</td>
+        </tr>
+        <tr>
+          <td class="mono">UpdateSensorsList.txt</td>
+          <td class="val">24 120 &times; 3</td><td class="val">289 KB</td>
+          <td>ChipID, track count, status flag</td>
+        </tr>
+        <tr>
+          <td class="mono">NTracksBySensor.txt</td>
+          <td class="val">24 120 &times; 2</td><td class="val">202 KB</td>
+          <td>occupancy</td>
+        </tr>
+        <tr>
+          <td class="mono">CostGradient_Epoch_At_&lt;e&gt;.txt</td>
+          <td class="val">24 120 rows / epoch</td><td class="val">text</td>
+          <td>per-sensor gradient <em>and</em> the six alignment-parameter gradients, per epoch</td>
+        </tr>
+        <tr>
+          <td class="mono">OffsetSlopeCorrectionParams.txt</td>
+          <td class="val">24 120 &times; 17</td><td class="val">5.0 MB</td>
+          <td>offset-tuning coefficients</td>
+        </tr>
+        <tr>
+          <td class="mono">train_done.log</td>
+          <td class="val">stdout</td><td class="val">text</td>
+          <td>loss per epoch, track/event loss counts, charge-symmetry table</td>
+        </tr>
+        <tr>
+          <td class="mono">Residual_Monitor_Epoch_At_&lt;e&gt;.root</td>
+          <td class="val">TTree, per track</td><td class="val">ROOT</td>
+          <td>per-hit residuals with global position, DCA, vertex variants, curvature, full sensor addressing</td>
+        </tr>
+        <tr>
+          <td class="mono">Residual_Epoch_At_&lt;e&gt;.root</td>
+          <td class="val">TH1D/TH2D/TProfile</td><td class="val">ROOT</td>
+          <td>residuals by layer, half-barrel, half-stave, against z and &phi;</td>
+        </tr>
+        <tr>
+          <td class="mono">XXXXGeom.root</td>
+          <td class="val">TNtuple &times; 4</td><td class="val">ROOT</td>
+          <td>ideal / target / corrected sensor positions, <code>gSx gSy gSz</code> per ChipID</td>
+        </tr>
+        <tr>
+          <td class="mono">ITSAlignment.root</td>
+          <td class="val">vector&lt;AlignParam&gt;</td><td class="val">734 KB</td>
+          <td>the starting alignment</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Browser payload</h4>
+  <p>
+    A detector map needs ChipID plus six alignment parameters per sensor. As
+    <code>Float32</code> that is <strong>24 120 &times; 6 &times; 4 B = 579 KB</strong>, plus a
+    one-time geometry table of the same order. Both are static assets. Rendering 24 120 instanced
+    quads is unremarkable for WebGL, and even a 2D unrolled &phi;&ndash;z view is well within
+    Canvas territory. Volume is not a constraint anywhere in this problem.
+  </p>
+
+  <h4>Occupancy, from the committed set</h4>
+  <p>
+    49 551 936 tracks total, up to 148 294 on a single sensor, and <strong>no sensor with zero
+    occupancy</strong> &mdash; every one of the 24 120 carries <code>status = 1</code>. A map would
+    therefore be fully populated rather than sparse, which is the favorable case for a
+    color-encoded view.
+  </p>
+</section>
+
+<!-- 02 -->
+<section id="readability">
+  <h2><span class="stage">Section 02</span>What is readable without ROOT</h2>
+
+  <p>
+    This is the question that decides the architecture, so it is worth being precise about.
+  </p>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 1000 470" role="img" aria-label="Data sources grouped by how they are read. Plain text files and the log parse with the standard library alone. The residual monitor tree, the residual histograms and the geometry ntuple are read by uproot in pure Python. Only the starting alignment file requires an O2 environment, and it is needed once rather than per run.">
+        <defs>
+          <marker id="p1a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-grey" points="0,0 10,4 0,8" />
+          </marker>
+          <marker id="p1g" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-go" points="0,0 10,4 0,8" />
+          </marker>
+          <marker id="p1r" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-rej" points="0,0 10,4 0,8" />
+          </marker>
+        </defs>
+
+        <text class="d-cap" x="24" y="26">CAMPAIGN OUTPUT</text>
+        <text class="d-cap" x="392" y="26">READER</text>
+        <text class="d-cap" x="716" y="26">AVAILABLE TO THE UI</text>
+
+        <!-- group 1 : plain text -->
+        <rect class="d-go" x="24" y="42" width="300" height="104" rx="2" />
+        <text class="d-t b" x="44" y="66">Plain text</text>
+        <text class="d-m" x="44" y="86">weights.txt &middot; UpdateSensorsList.txt</text>
+        <text class="d-m" x="44" y="104">NTracksBySensor.txt</text>
+        <text class="d-m" x="44" y="122">CostGradient_Epoch_At_*.txt</text>
+        <text class="d-m" x="44" y="140">train_done.log</text>
+
+        <path class="d-lg" d="M330,94 H386" marker-end="url(#p1g)" />
+        <rect class="d-go" x="392" y="66" width="300" height="56" rx="2" />
+        <text class="d-t b" x="412" y="90">split() &mdash; no dependency</text>
+        <text class="d-gt" x="412" y="108">stdlib only, any language</text>
+
+        <path class="d-lg" d="M698,94 H756" marker-end="url(#p1g)" />
+        <text class="d-t" x="764" y="82">alignment map, occupancy,</text>
+        <text class="d-t" x="764" y="100">gradient trending, loss curve,</text>
+        <text class="d-t" x="764" y="118">charge-symmetry table</text>
+
+        <!-- group 2 : uproot -->
+        <rect class="d-go" x="24" y="172" width="300" height="104" rx="2" />
+        <text class="d-t b" x="44" y="196">ROOT, but POD only</text>
+        <text class="d-m" x="44" y="216">Residual_Monitor_*.root  (struct)</text>
+        <text class="d-m" x="44" y="234">Residual_*.root  (TH1D/TH2D/TProfile)</text>
+        <text class="d-m" x="44" y="252">XXXXGeom.root  (TNtuple)</text>
+        <text class="d-m" x="44" y="270">weights.txt equivalents</text>
+
+        <path class="d-lg" d="M330,224 H386" marker-end="url(#p1g)" />
+        <rect class="d-go" x="392" y="196" width="300" height="56" rx="2" />
+        <text class="d-t b" x="412" y="220">uproot &mdash; pure Python</text>
+        <text class="d-gt" x="412" y="238">no ROOT install, no O&#178; environment</text>
+
+        <path class="d-lg" d="M698,224 H756" marker-end="url(#p1g)" />
+        <text class="d-t" x="764" y="212">per-hit residuals with global</text>
+        <text class="d-t" x="764" y="230">position, sensor geometry,</text>
+        <text class="d-t" x="764" y="248">residual distributions</text>
+
+        <!-- group 3 : needs O2 -->
+        <rect class="d-rej" x="24" y="302" width="300" height="72" rx="2" />
+        <text class="d-t b" x="44" y="326">Needs an O&#178; dictionary</text>
+        <text class="d-m" x="44" y="346">ITSAlignment.root</text>
+        <text class="d-m" x="44" y="364">std::vector&lt;o2::detectors::AlignParam&gt;</text>
+
+        <path class="d-lr" d="M330,338 H386" marker-end="url(#p1r)" />
+        <rect class="d-rej" x="392" y="310" width="300" height="56" rx="2" />
+        <text class="d-t b" x="412" y="334">one-time export in O&#178;</text>
+        <text class="d-rt" x="412" y="352">run once per starting geometry, not per run</text>
+
+        <path class="d-lr" d="M698,338 H756" marker-end="url(#p1r)" />
+        <text class="d-t" x="764" y="332">reference geometry for</text>
+        <text class="d-t" x="764" y="350">absolute displacement</text>
+
+        <line class="d-l" x1="24" y1="404" x2="976" y2="404" />
+        <text class="d-m" x="24" y="428">The only ROOT-environment dependency is a single static file that changes when the starting alignment changes.</text>
+        <text class="d-m" x="24" y="448">Everything a campaign produces per run is reachable from Python with uproot, or from the standard library alone.</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Figure 1</b> Grouped by reader, not by format. The practical consequence is that a
+      monitoring service needs neither a ROOT installation nor the O<sup>2</sup> environment &mdash;
+      it needs <code>uproot</code> and a file path. That is what makes a deployable service
+      realistic rather than something that has to live inside an ALICE software stack.
+    </figcaption>
+  </figure>
+
+  <h4>Formats that are already machine-readable</h4>
+  <p>
+    Two of these deserve mention because they are richer than their file extension suggests.
+  </p>
+  <ul>
+    <li>
+      <code>CostGradient_Epoch_At_&lt;e&gt;.txt</code> emits, per sensor and per epoch:
+      <code>Epoch&lt;N&gt; Layer&lt;L&gt; Chip&lt;C&gt; &lt;nhits&gt; hits Grad &hellip; AlignPar(R,T) &hellip;</code>
+      &mdash; the network gradient and the six alignment-parameter gradients together. Per-sensor
+      convergence trending needs nothing but this file series.
+    </li>
+    <li>
+      <code>train_done.log</code> carries fixed-form lines:
+      <code>(Ave)Epoch: &lt;n&gt; learn=&hellip; test=&hellip; fTotN(E) &hellip; fLoss(E) &hellip;</code>,
+      <code>COSTMONITOR[TRAINING] EPOCH&lt;n&gt; Fit + CHSYM = a + b = c</code>, and one
+      <code>PSTV#&lt;n&gt; (+) &hellip; (-) &hellip; |DIFF| &hellip;</code> line per &phi; patch. The
+      loss curve, the fit/charge-symmetry decomposition and the weak-mode monitor are all
+      recoverable by regular expression.
+    </li>
+  </ul>
+</section>
+
+<!-- 03 -->
+<section id="panels">
+  <h2><span class="stage">Section 03</span>What the interface should show</h2>
+
+  <p class="lede">
+    For a small internal group that runs the alignment, the value is not in prettier versions of
+    plots that already exist. It is in the questions that are currently awkward to ask.
+  </p>
+
+  <h3>Currently easy, and already served by the batch macros</h3>
+  <p>
+    Loss against epoch, residual distributions per layer, occupancy per half-stave. A UI should
+    carry these, but they are not the reason to build one.
+  </p>
+
+  <h3>Currently awkward &mdash; the actual case for a platform</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Question</th><th>Panel</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Which sensors moved, and by how much?</td>
+          <td>Detector map, color-encoded by any of the six DoF, with a shared scale across layers</td>
+          <td class="mono">weights.txt + geometry</td>
+        </tr>
+        <tr>
+          <td><strong>What changed between step <em>s</em> and <em>s</em>&nbsp;+&nbsp;1?</strong></td>
+          <td>Difference map on the same scale. This is the view that does not exist today in any form &mdash; comparing steps means diffing two 24 120-row text files by eye.</td>
+          <td class="mono">two weights.txt</td>
+        </tr>
+        <tr>
+          <td>Is there a coherent weak mode left?</td>
+          <td>&gamma; against &phi;, T against z, per layer. A systematic trend in these is the signature the residual histograms hide by averaging.</td>
+          <td class="mono">weights.txt + geometry</td>
+        </tr>
+        <tr>
+          <td>Which sensors have stalled?</td>
+          <td>Gradient magnitude against epoch, ranked; sensors whose gradient collapsed early separated from those still moving</td>
+          <td class="mono">CostGradient_*.txt</td>
+        </tr>
+        <tr>
+          <td>Which sensors are outliers?</td>
+          <td>Ranked table with drill-down to that sensor's residual distribution and occupancy</td>
+          <td class="mono">weights.txt + monitor tree</td>
+        </tr>
+        <tr>
+          <td>Is the charge asymmetry closing?</td>
+          <td>The 20 &phi;-patch <code>|DIFF|</code> series across epochs and steps</td>
+          <td class="mono">train_done.log</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note caveat">
+    <span class="tag">A concrete motivating observation</span>
+    <p>
+      Reading the six alignment columns out of the committed <code>weights.txt</code> gives mean
+      <code>|T1|</code> &asymp; 760&nbsp;&micro;m, mean <code>|T2|</code> &asymp; 909&nbsp;&micro;m,
+      mean <code>|T3|</code> &asymp; 558&nbsp;&micro;m and mean <code>|&gamma;|</code> &asymp;
+      2.3&nbsp;mrad, with a maximum <code>|T1|</code> above 8&nbsp;mm on at least one sensor.
+    </p>
+    <p>
+      I do not know which step this file came from or what it is referenced against, so I am not
+      claiming anything is wrong. The point is narrower: a per-sensor value of that size is
+      invisible in a 24 120-row text file and unmistakable on a map. That asymmetry &mdash; between
+      how the data is stored and how the eye finds structure in it &mdash; is the whole argument
+      for the first tier.
+    </p>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="tiers">
+  <h2><span class="stage">Section 04</span>Three tiers</h2>
+
+  <figure class="fig">
+    <div class="fig-frame">
+      <svg viewBox="0 0 1000 400" role="img" aria-label="Three build tiers stacked by increasing infrastructure. Tier one is a static explorer needing no backend. Tier two adds a monitoring service requiring Python with uproot and a file share. Tier three adds campaign control, which requires replacing compile-time configuration and a job submission path.">
+        <defs>
+          <marker id="p2a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="7" orient="auto">
+            <polygon class="h-grey" points="0,0 10,4 0,8" />
+          </marker>
+        </defs>
+
+        <!-- tier 1 -->
+        <rect class="d-go" x="24" y="30" width="700" height="94" rx="2" />
+        <text class="d-cap" x="44" y="54">TIER 1 &mdash; STATIC EXPLORER</text>
+        <text class="d-t b" x="44" y="78">Detector map, DoF views, step difference, sensor drill-down</text>
+        <text class="d-m" x="44" y="98">Ingest: weights.txt, UpdateSensorsList.txt, geometry JSON &mdash; all static</text>
+        <text class="d-m" x="44" y="114">Runs entirely in the browser. Shareable as a single page.</text>
+        <text class="d-gt" x="744" y="70">no backend</text>
+        <text class="d-gt" x="744" y="88">no install</text>
+        <text class="d-gt" x="744" y="106">days</text>
+
+        <line class="d-l" x1="374" y1="124" x2="374" y2="148" marker-end="url(#p2a)" />
+
+        <!-- tier 2 -->
+        <rect class="d-acc" x="24" y="154" width="700" height="94" rx="2" />
+        <text class="d-cap" x="44" y="178">TIER 2 &mdash; CAMPAIGN MONITORING</text>
+        <text class="d-t b" x="44" y="202">Adds loss curves, gradient trending, residual distributions, step history</text>
+        <text class="d-m" x="44" y="222">Ingest: + CostGradient_*.txt, train_done.log, Residual*.root via uproot</text>
+        <text class="d-m" x="44" y="238">Needs a Python service watching the step directories and a run registry.</text>
+        <text class="d-at" x="744" y="194">Python + uproot</text>
+        <text class="d-at" x="744" y="212">file access</text>
+        <text class="d-at" x="744" y="230">weeks</text>
+
+        <line class="d-l" x1="374" y1="248" x2="374" y2="272" marker-end="url(#p2a)" />
+
+        <!-- tier 3 -->
+        <rect class="d-sig" x="24" y="278" width="700" height="94" rx="2" />
+        <text class="d-cap" x="44" y="302">TIER 3 &mdash; CAMPAIGN CONTROL</text>
+        <text class="d-t b" x="44" y="326">Adds configure, launch, stop, and compare runs from the interface</text>
+        <text class="d-m" x="44" y="346">Requires runtime configuration in place of the compile-time defines</text>
+        <text class="d-m" x="44" y="362">plus job submission and an O&#178; environment on the execution side.</text>
+        <text class="d-st" x="744" y="318">config refactor</text>
+        <text class="d-st" x="744" y="336">job runner</text>
+        <text class="d-st" x="744" y="354">significant</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Figure 2</b> Each tier is independently useful and each is a superset of the one above,
+      so the sequence can stop at any point without waste. The step from tier 2 to tier 3 is
+      qualitatively different from the step from 1 to 2: the first two only read, the third writes
+      and executes.
+    </figcaption>
+  </figure>
+</section>
+
+<!-- 05 -->
+<section id="blocker">
+  <h2><span class="stage">Section 05</span>The real blocker</h2>
+
+  <p>
+    Everything that governs a run is a preprocessor define. <code>nDATA</code> and
+    <code>nEPOCH</code> in <code>YMLPParallel.h</code>; <code>TrackRejection</code>,
+    <code>RANGE_CHI_IB/OB</code>, <code>Update_pTmin/max</code>, <code>DET_MAG</code>,
+    <code>FITMODEL</code>, <code>MONITORONLYUPDATES_MODE</code> and the monitoring switches in
+    <code>DetectorConstant.h</code>. Changing any of them means recompiling.
+  </p>
+
+  <p>
+    For tiers 1 and 2 this is irrelevant &mdash; they read what a run produced. For tier 3 it is the
+    dominant cost, and there are two ways through it.
+  </p>
+
+  <ol class="body-list">
+    <li>
+      <strong>Generate the headers.</strong> The UI writes <code>DetectorConstant.h</code> and
+      <code>YMLPParallel.h</code> from a form, then triggers the existing compile-and-run path.
+      This is not a hack: <code>run_profile_beam.C</code> already generates
+      <code>YMLPBeamProfile.h</code> exactly this way, so the pattern is established in the
+      codebase and the build already recompiles per run through ROOT macro loading. Cheapest route,
+      and it preserves the compile-time constant folding the numerics may depend on.
+    </li>
+    <li>
+      <strong>Move configuration to runtime.</strong> Cleaner and enables parameter scans within a
+      campaign, but it touches the hot path &mdash; several of these defines size fixed arrays and
+      guard <code>#ifdef</code> blocks that compile whole monitoring subsystems in or out.
+      <code>MONITORHALFSTAVEUNIT</code> and <code>MONITORSENSORUNITprofile</code> are structural,
+      not just values. This is a real refactor of the module, not a wrapper.
+    </li>
+  </ol>
+
+  <p>
+    Route 1 is the pragmatic choice and is what I would propose if tier 3 is ever wanted. It should
+    not be attempted before tier 2 exists, because a launcher without monitoring is strictly worse
+    than the current shell scripts.
+  </p>
+</section>
+
+<!-- 06 -->
+<section id="recommend">
+  <h2><span class="stage">Section 06</span>Recommended path</h2>
+
+  <p>
+    <strong>Build tier 1 first, as a single self-contained page.</strong> The reasoning:
+  </p>
+
+  <ul>
+    <li>It needs no infrastructure, no deployment and no ALICE software environment, so it can be
+      shared the same way the workflow document is.</li>
+    <li>It validates the data model &mdash; the sensor indexing, the geometry join, the DoF scaling
+      &mdash; before any of that gets baked into a service.</li>
+    <li>It answers the step-difference question, which is the one genuinely missing capability
+      rather than a nicer rendering of an existing plot.</li>
+    <li>If it turns out the map is not useful in practice, nothing has been spent on a backend.</li>
+  </ul>
+
+  <p>
+    Concretely, tier 1 needs one preparation step outside the browser: exporting the sensor
+    geometry once. <code>ReconstructGeometries</code> already writes <code>gSx, gSy, gSz</code> per
+    ChipID into <code>XXXXGeom.root</code>, so this is a single <code>uproot</code> read producing
+    a static JSON of about 24 120 entries. After that the page is fed by
+    <code>weights.txt</code> files alone.
+  </p>
+
+  <p>
+    Tier 2 becomes worthwhile once more than a few campaigns are being compared, since that is when
+    manual bookkeeping of step directories starts to cost more than a service would. Tier 3 should
+    wait for a demonstrated need to launch runs from outside a terminal.
+  </p>
+</section>
+
+<!-- 07 -->
+<section id="open">
+  <h2><span class="stage">Section 07</span>Open questions</h2>
+
+  <p>
+    Points I could not settle from the repository alone, roughly in order of how much they affect a
+    tier-1 design.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Question</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Is the committed <code>weights.txt</code> the final deployed set, and what step is it from?</td>
+          <td>Determines whether the parameter magnitudes noted in section 03 are expected, and sets the color scale for the map.</td>
+        </tr>
+        <tr>
+          <td>Are the six parameters absolute, or relative to <code>ITSAlignment.root</code>?</td>
+          <td>Decides whether the map needs the O<sup>2</sup> reference export at all, which is the only ROOT-environment dependency in tier 1.</td>
+        </tr>
+        <tr>
+          <td>Is a <code>XXXXGeom.root</code> available, or would <code>ReconstructGeometries</code> need to be run once?</td>
+          <td>The one preparation step standing between the current state and a working map.</td>
+        </tr>
+        <tr>
+          <td>How many steps does a typical campaign run, and are the tarballs retained?</td>
+          <td>Sets whether step history is a two-file comparison or a real time series, which changes the tier-2 data model.</td>
+        </tr>
+        <tr>
+          <td>Would this stay internal, or be shown alongside the workflow document externally?</td>
+          <td>Affects whether the page should carry explanatory context or assume the reader runs the alignment.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>
+    Assessment based on the repository at revision <code>f8a3576</code>. File sizes, row counts,
+    occupancy figures and parameter magnitudes were measured directly from the committed artifacts;
+    format and readability claims were read from the sources. The correction in section 00 revises
+    an earlier verbal assessment made before <code>YResidualMonitor</code> was inspected. Companion
+    document: <em>ITS2 ML Alignment Workflow</em>, <code>docs/workflow.html</code>.
+  </p>
+</footer>
+
+  </main>
+</div>
+</div>

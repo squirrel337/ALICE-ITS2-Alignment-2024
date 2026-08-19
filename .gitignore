@@ -72,3 +72,16 @@ MLPTrain*/
 /Residual_Epoch_At_*.root
 /Residual_Monitor_Epoch_At_*.root
 /MLPTrain_Step900/
+
+# Explorer intermediate payload (regenerable: tools/build_explorer_data.py)
+docs/explorer-data.json
+
+# range-cut diagnostic input (tools/extract_hits.py)
+hits*.txt
+
+# Python bytecode cache (tools/ is imported as a module when validating the core fit)
+__pycache__/
+*.pyc
+
+# Run-console job directories (composed per launch, regenerable)
+console_out/
