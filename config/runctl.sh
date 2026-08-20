@@ -15,7 +15,6 @@
 #    runctl.sh log [-f]             show the run log
 #    runctl.sh stop                 stop the running job
 #    runctl.sh outputs              list what the job produced
-#    runctl.sh reduce [OUT]         build an explorer payload from the run
 #    runctl.sh ui                   open the ROOT run-console window
 # ==========================================================================
 set -u
@@ -23,7 +22,12 @@ set -u
 _here=$(cd "$(dirname "$0")" && pwd)
 . "$_here/runconf.sh"
 
-usage() { sed -n '3,22p' "$0" | sed 's/^#[ ]\{0,2\}//'; }
+# Printed from the header block above rather than a hardcoded line range: a
+# verb added or removed there must not silently desynchronise the help text.
+# Stops at the second rule, which closes the block.
+usage() {
+  awk 'NR<3{next} /^# ={20,}/{if(++n==2)exit; next} /^#/{sub(/^#[ ]?[ ]?/,""); print}' "$0"
+}
 
 cmd=${1:-show}
 [ $# -gt 0 ] && shift
@@ -112,11 +116,6 @@ case "$cmd" in
   outputs)
     rc_load || exit 1
     rc_outputs
-    ;;
-
-  reduce)
-    rc_load || exit 1
-    rc_reduce "${1:-}"
     ;;
 
   ui)

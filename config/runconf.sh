@@ -753,26 +753,3 @@ rc_outputs() {
     return 1
   fi
 }
-
-# Hands a finished run to the explorer payload extractor. That tool is Python
-# (uproot + numpy) and is not needed to run a job -- only to look at one in the
-# explorer -- so its absence is reported rather than treated as an error.
-rc_reduce() {
-  local out="${1:-$RC_JOB_DIR/explorer-data.json}"
-  local ex="$RC_ROOT/tools/build_explorer_data.py"
-  [ -f "$ex" ] || { rc_die "no $ex"; return 1; }
-  command -v python3 >/dev/null 2>&1 || {
-    echo "python3 is not available, so the explorer payload cannot be built here." >&2
-    echo "The run itself is unaffected; copy $RC_JOB_DIR to a machine with python3 and uproot." >&2
-    return 1; }
-  python3 "$ex" \
-    --step-dir     "$RC_JOB_DIR/MLPTrain_Step${RC_LAST_STEP}" \
-    --epoch        -1 \
-    --log          "$RC_LOG" \
-    --geometry     "$RC_JOB_DIR/geometry/its2_geom.root" \
-    --weights      "$RC_JOB_DIR/NetworkParameters/weights.txt" \
-    --seed-weights "$RC_JOB_DIR/MLPTrain_Step$(( RC_LAST_STEP - 1 ))/weights/weights.txt" \
-    --usl          "$RC_JOB_DIR/UpdateSensorsList.txt" \
-    --all-epochs \
-    --out          "$out"
-}

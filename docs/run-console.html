@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITS2 Run Console</title>
+<style>
+:root {
+  --ground:      #F1F4F6;
+  --surface:     #FFFFFF;
+  --surface-2:   #E7ECF0;
+  --ink:         #121A21;
+  --ink-2:       #4B5A67;
+  --ink-3:       #77848F;
+  --rule:        #D4DBE2;
+  --rule-strong: #AFBBC6;
+  --accent:      #0D6B77;
+  --accent-soft: #D9EDEF;
+  --signal:      #9C5605;
+  --signal-soft: #F6E8D4;
+  --reject:      #962A39;
+  --reject-soft: #F4DCDF;
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, "Bitstream Charter", Georgia, serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #0E1317;
+    --surface:     #161C21;
+    --surface-2:   #1D252B;
+    --ink:         #E2E8ED;
+    --ink-2:       #A2AFBA;
+    --ink-3:       #7B8894;
+    --rule:        #273038;
+    --rule-strong: #3C4852;
+    --accent:      #4EBDCA;
+    --accent-soft: #10333A;
+    --signal:      #DFA24C;
+    --signal-soft: #33270F;
+    --reject:      #E8808F;
+    --reject-soft: #391B21;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:      #0E1317;
+  --surface:     #161C21;
+  --surface-2:   #1D252B;
+  --ink:         #E2E8ED;
+  --ink-2:       #A2AFBA;
+  --ink-3:       #7B8894;
+  --rule:        #273038;
+  --rule-strong: #3C4852;
+  --accent:      #4EBDCA;
+  --accent-soft: #10333A;
+  --signal:      #DFA24C;
+  --signal-soft: #33270F;
+  --reject:      #E8808F;
+  --reject-soft: #391B21;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 48px 24px 96px; }
+
+header.page { border-bottom: 2px solid var(--rule-strong); padding-bottom: 24px; margin-bottom: 40px; }
+header.page .eyebrow {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--accent); margin: 0 0 10px;
+}
+header.page h1 {
+  font-family: var(--font-display); font-weight: 600; font-size: 40px;
+  line-height: 1.15; margin: 0 0 12px;
+}
+header.page p.lede { margin: 0; color: var(--ink-2); font-size: 17px; max-width: 68ch; }
+
+section { margin: 0 0 44px; }
+h2 {
+  font-family: var(--font-display); font-size: 26px; font-weight: 600;
+  margin: 0 0 6px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+}
+h2 .n {
+  font-family: var(--font-mono); font-size: 12px; color: var(--ink-3);
+  letter-spacing: .1em; margin-right: 12px; vertical-align: middle;
+}
+h3 { font-family: var(--font-body); font-size: 17px; font-weight: 650; margin: 26px 0 6px; }
+p { margin: 12px 0; max-width: 74ch; }
+.mono { font-family: var(--font-mono); font-size: .92em; }
+code {
+  font-family: var(--font-mono); font-size: .88em;
+  background: var(--surface-2); padding: 1px 5px; border-radius: 3px;
+}
+pre {
+  background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+  border-radius: 4px; padding: 14px 16px; overflow-x: auto;
+  font-family: var(--font-mono); font-size: 13px; line-height: 1.55; margin: 14px 0;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+.table-wrap { overflow-x: auto; margin: 16px 0; border: 1px solid var(--rule); border-radius: 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; background: var(--surface); }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th {
+  background: var(--surface-2); font-weight: 650; font-size: 12px;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+td.k { font-family: var(--font-mono); font-size: 13px; white-space: nowrap; color: var(--accent); }
+td.val { font-family: var(--font-mono); font-size: 13px; white-space: nowrap; }
+
+.note {
+  border-left: 3px solid var(--signal); background: var(--signal-soft);
+  padding: 12px 16px; border-radius: 0 4px 4px 0; margin: 18px 0;
+}
+.note .lbl {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--signal); display: block; margin-bottom: 4px;
+}
+.note p { margin: 6px 0; }
+.warn { border-left-color: var(--reject); background: var(--reject-soft); }
+.warn .lbl { color: var(--reject); }
+
+footer.page {
+  margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule);
+  color: var(--ink-3); font-size: 13.5px;
+}
+footer.page a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">ALICE ITS2 ML Alignment</p>
+  <h1>Run Console</h1>
+  <p class="lede">
+    Configure, check, compose and launch one alignment run — from a terminal or from a
+    ROOT window, with no Python anywhere. Built for CentOS 7 with ROOT present, which is
+    the only environment it has to work in.
+  </p>
+</header>
+
+<section>
+  <h2><span class="n">01</span>Why it is shell</h2>
+  <p>
+    The console was originally <code>tools/run_console.py</code>, which served a web UI.
+    It could not run on the machine it was written for: it needs Python 3.8 —
+    <code>shutil.copytree(dirs_exist_ok=)</code> at three sites, <code>ThreadingHTTPServer</code>,
+    f-strings throughout — and CentOS 7 ships 2.7.5. EPEL's <code>python36</code> is still
+    short of it.
+  </p>
+  <p>
+    The target has ROOT, and that changes what the console needs. Reading the input tree was
+    the one job that genuinely required a library; <code>root -l -b -q</code> does it, so the
+    uproot dependency disappears and with it the last reason for Python to be involved. The
+    rest — copying a tree, linking large inputs, unpacking a seed archive, patching
+    <code>#define</code>s, launching and tailing — is what shell is for.
+  </p>
+  <p>
+    The layout follows
+    <span class="mono">ALICE-ITS2-ML-Alignment-Manager</span>, so both trees are operated the
+    same way: one bash-sourced configuration, one library, one dispatcher, one ROOT window.
+  </p>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td class="k">config/runconsole.conf</td><td>Every setting one run needs, 34 of them</td></tr>
+      <tr><td class="k">config/runconf.sh</td><td>Library: load, validate, doctor, compose, run, outputs</td></tr>
+      <tr><td class="k">config/runctl.sh</td><td>Command-line dispatcher</td></tr>
+      <tr><td class="k">tools/ConfigUI/RunConsoleUI.C</td><td>The ROOT window: six tabs, action bar, log pane</td></tr>
+      <tr><td class="k">tools/ConfigUI/DirBrowser.h</td><td>Directory chooser, shared verbatim with the Manager</td></tr>
+      <tr><td class="k">tools/tree_entries.C</td><td>Entries in a tree, without Python</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">02</span>Quick start</h2>
+<pre><code>eval `alienv load -w $O2_DIR/sw O2/latest`   # only if this tree needs O2
+
+./config/runctl.sh ui         # set everything in one window
+./config/runctl.sh doctor     # check this machine has what the run needs
+./config/runctl.sh compose    # build the job directory
+./config/runctl.sh run        # launch it, detached
+./config/runctl.sh log -f     # watch</code></pre>
+  <p>
+    Exit status is 0 on success and non-zero when a check fails, so these compose into a
+    batch script without parsing their output.
+  </p>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Command</th><th>Does</th></tr></thead>
+    <tbody>
+      <tr><td class="k">show</td><td>Print every setting, plus what follows from it</td></tr>
+      <tr><td class="k">get KEY</td><td>Print one value. <code>RC_*</code> reads a derived one</td></tr>
+      <tr><td class="k">set KEY=VALUE …</td><td>Change settings, then re-validate</td></tr>
+      <tr><td class="k">keys</td><td>List every key</td></tr>
+      <tr><td class="k">validate</td><td>Check types and relationships between values</td></tr>
+      <tr><td class="k">doctor</td><td>Check inputs, disk, memory and ROOT on this machine</td></tr>
+      <tr><td class="k">compose</td><td>Build <code>OUTPUT_DIR/JOB_TAG</code> from the module</td></tr>
+      <tr><td class="k">run</td><td>Launch the composed job, detached</td></tr>
+      <tr><td class="k">status</td><td>Is it running, which step, where is the log</td></tr>
+      <tr><td class="k">log [-f]</td><td>Show or follow the run log</td></tr>
+      <tr><td class="k">stop</td><td>Send TERM to the running job</td></tr>
+      <tr><td class="k">outputs</td><td>List what each step produced</td></tr>
+      <tr><td class="k">ui</td><td>Open the ROOT window</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">03</span>The window</h2>
+  <p>
+    <code>runctl.sh ui</code> opens a ROOT GUI with six tabs — Inputs, Module, Job, Learning,
+    Selection, Run — an action bar and a log pane. Path fields have a <strong>Browse…</strong>
+    button: files use ROOT's file dialog, directories use the same <code>TBrowser</code>-style
+    tree the Manager uses. Everything is ROOT's own toolkit, so CentOS 7 needs no extra packages.
+  </p>
+
+  <div class="note">
+    <span class="lbl">The rule that keeps the two halves honest</span>
+    <p>
+      The window never writes the configuration file, never composes and never launches
+      anything itself. Every button shells out to <code>runctl.sh</code>, so the file format,
+      the validation rules and the job layout live in one place and the GUI cannot drift away
+      from the command line. Whatever the window can do, you can do over ssh with no display.
+    </p>
+  </div>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Tab</th><th>Settings</th></tr></thead>
+    <tbody>
+      <tr><td class="val">Inputs</td><td class="mono">DATA_FILE, DATA_TREE, GEOM_FILE, ALIGN_FILE, PARAMS_ARCHIVE</td></tr>
+      <tr><td class="val">Module</td><td class="mono">MODULE_DIR, FIRST_STEP, N_STEPS</td></tr>
+      <tr><td class="val">Job</td><td class="mono">JOB_NDATA, JOB_NEPOCH, JOB_NCORE, JOB_JPARALLEL, JOB_NTRACKMAX, JOB_DET_MAG, JOB_FITMODEL, JOB_VERTEXFIT, JOB_LEARNING_METHOD</td></tr>
+      <tr><td class="val">Learning</td><td class="mono">JOB_ETA_CONSTANT, JOB_ETA_SCALE, JOB_ETA_DETRES, JOB_VALID_WINDOW</td></tr>
+      <tr><td class="val">Selection</td><td class="mono">JOB_PT_MIN, JOB_PT_MAX, JOB_CHI_IB, JOB_CHI_OB, JOB_CHI_IB_TRAIN, JOB_CHI_OB_TRAIN, JOB_TRACK_REJECT, JOB_IP_RANGE_R, JOB_IP_RANGE_Z, JOB_MIN_CLUSTER</td></tr>
+      <tr><td class="val">Run</td><td class="mono">OUTPUT_DIR, JOB_TAG, ROOTSYS_OVERRIDE</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">04</span>What compose builds</h2>
+  <p><code>compose</code> creates <code>OUTPUT_DIR/JOB_TAG</code> and fills it with:</p>
+  <ul>
+    <li>a copy of <code>Ymlp/</code>, <code>monitor/</code>, <code>geometry/</code>,
+        <code>NetworkParameters/</code>, <code>tools/</code> and the top-level macros</li>
+    <li><strong>symlinks</strong>, not copies, for the three large inputs — the data file alone
+        is about 800&nbsp;MB, and copying it per job would fill the disk for nothing</li>
+    <li>the seed archive unpacked into <code>MLPTrain_Step&lt;FIRST_STEP-1&gt;/</code>, where
+        <code>run_train_circle.C</code> looks for <code>SetPrevUSL</code> and
+        <code>SetPrevWeight</code></li>
+    <li>a regenerated <code>YMLPParallel.h</code> (it is exactly four defines), an in-place patch
+        of fourteen <code>#define</code>s in that job's <code>DetectorConstant.h</code>, the four
+        eta and clip globals in its <code>YMultiLayerPerceptron.cxx</code>, and the learning
+        method and tree name in its <code>run_train_circle.C</code></li>
+    <li><code>run_steps.sh</code>, the generated step loop</li>
+  </ul>
+
+  <div class="note">
+    <span class="lbl">The property worth preserving</span>
+    <p>
+      <strong>The module checkout is only ever read.</strong> That is what lets the console drive
+      a tree meant to stay untouched — and it is what makes a composed job reproducible, since
+      every knob it ran with is recorded in its own files rather than in a checkout that has
+      since moved on.
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">05</span>Steps</h2>
+  <p>
+    <code>FIRST_STEP</code> and <code>N_STEPS</code> set a range. Step <em>N</em> reads
+    <code>MLPTrain_Step&lt;N-1&gt;/</code> and writes <code>MLPTrain_Step&lt;N&gt;/</code>, so
+    the chain continues on its own and only the first step needs the seed archive. Compose
+    writes <code>run_steps.sh</code> into the job directory and <code>run</code> launches it
+    with <code>setsid</code>; it rewrites <code>batch_train</code> per step, files
+    <code>train.log</code> into the step directory and tars the result — the same shape as
+    <code>process_all_train.sh</code>.
+  </p>
+  <p>
+    If a step fails the run stops there rather than feeding a broken step into the next.
+    <code>status</code> reads <code>run.step</code>, so it can answer <em>“step 3 of 10”</em>
+    even after the window has been closed and reopened.
+  </p>
+</section>
+
+<section>
+  <h2><span class="n">06</span>The learning rate</h2>
+  <p>
+    eta is not a <code>#define</code>. <code>YMultiLayerPerceptron.cxx</code> computes it in the
+    constructor from three plain file-scope globals:
+  </p>
+<pre><code>double UpdateConstant  = 0.05;
+double UpdateScale     = 1.0e-7;
+double DETRES          = 1000.0;   // um
+
+fEta = UpdateConstant * UpdateScale * pow(DETRES*1e-4, 2);   // = 5e-11</code></pre>
+  <p>
+    So the console patches that <strong>source file</strong> in the job copy, not a header.
+    Nothing is rebuilt for it: <code>run_train_circle.C</code> includes
+    <code>YAlignment.cxx</code> directly, so cling reinterprets the source on every run. The
+    commented-out duplicates a few lines below are left alone, because the patch anchors at the
+    start of the line.
+  </p>
+  <p>
+    The three constants are exposed rather than eta itself, and the window shows what they come
+    to. Deriving <code>UpdateConstant</code> backwards from a typed eta would silently disagree
+    with the module's own arithmetic, and <code>DETRES</code> is a physically meaningful number —
+    the assumed detector resolution in µm — worth setting on its own terms.
+  </p>
+
+  <div class="note warn">
+    <span class="lbl">This is the starting value, not the running one</span>
+    <p>
+      The module backtracks on its own. If the cost rises above
+      <code>training_Epast × 1.005</code> or <code>Init_training_E × 1.02</code>, it reloads the
+      previous epoch's weights and divides eta by <code>√10</code>, up to four times. The eta in
+      the log will differ from the configured one whenever that has happened — that is the module
+      working, not the setting being ignored.
+    </p>
+  </div>
+
+  <p>
+    <code>JOB_VALID_WINDOW</code> sits beside it and does a related job: it clamps how much a
+    single hit's residual may contribute to the weight update. eta scales the step; ValidWindow
+    bounds what any one hit can push.
+  </p>
+</section>
+
+<section>
+  <h2><span class="n">07</span>Selection</h2>
+  <p>
+    Two pairs of chi thresholds, deliberately different. <code>JOB_CHI_IB</code> /
+    <code>JOB_CHI_OB</code> decide which hits spoil the <strong>cost</strong>;
+    <code>JOB_CHI_IB_TRAIN</code> / <code>JOB_CHI_OB_TRAIN</code> which hits spoil the
+    <strong>weight update</strong>. <code>validate</code> refuses a training threshold looser
+    than its cost counterpart, since that would let the update accept hits the cost has already
+    rejected.
+  </p>
+
+  <div class="note warn">
+    <span class="lbl">Impact-parameter range, and the layer-0 defect</span>
+    <p>
+      <code>JOB_IP_RANGE_R</code> and <code>JOB_IP_RANGE_Z</code> are the impact-parameter
+      acceptance. In this tree they also decide how much a known defect costs: when a track has
+      no layer-0 hit, its reference point is read from stack memory that was never written, so
+      the impact parameter is meaningless and the track lands far outside the range. It is then
+      dropped from <strong>both</strong> the cost and the weight update.
+    </p>
+    <p>
+      Measured on run 539884: 51.6&nbsp;% of tracks have no layer-0 hit, and 90.85&nbsp;% of those
+      are marked <code>untrained</code> — 47.33&nbsp;% of the whole sample. Widening these two
+      values is the only lever available here, short of patching the module. The defect is fixed
+      in the 2025 tree, which projects to the vertex and searches for the innermost layer that
+      actually has a hit.
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">08</span>What doctor checks</h2>
+  <p>These are the things that cost time to discover late:</p>
+  <ul>
+    <li>the input tree exists and holds at least <code>JOB_NDATA</code> entries</li>
+    <li>the seed archive carries <code>weightsDU.txt</code>; without it the detector-unit
+        normalisations stay uninitialised and the cost comes out <code>-nan</code> after a full run</li>
+    <li><code>FIRST_STEP ≥ 1</code>; at step 0 the module hands <code>LoadUpdateSensorList</code>
+        an empty name and errors out</li>
+    <li>the geometry cache exists when the module is the cache-backed kind</li>
+    <li>free disk, and free memory against the roughly 8&nbsp;GB a job holds resident — two jobs
+        at once have OOM-killed each other</li>
+    <li>whether this module tree needs O<sup>2</sup> at runtime, read from its own sources rather
+        than assumed</li>
+  </ul>
+  <p>
+    It also prints the expected wall clock, from a model fitted on completed runs of this module:
+    <span class="mono">4.8 + 0.00337·nDATA + nEPOCH·0.01431·nDATA</span> minutes, with the
+    evaluation term at 75&nbsp;% when <code>nEPOCH</code> is 0 because <code>Train()</code>
+    returns before the test pass. Multiplied by <code>N_STEPS</code>.
+  </p>
+</section>
+
+<section>
+  <h2><span class="n">09</span>Driving another module version</h2>
+  <p>
+    Set <code>MODULE_DIR</code> to any alignment checkout. The console reads that tree's own
+    <code>YMLPParallel.h</code>, <code>DetectorConstant.h</code> and
+    <code>YDetectorGeometry</code> rather than assuming this one's, so it reports that tree's
+    knob values and whether it needs O<sup>2</sup>. Version independence is by discovery, not by
+    a table.
+  </p>
+</section>
+
+<footer class="page">
+  <p>
+    Part of the ALICE ITS2 ML alignment module. See <a href="workflow.html">workflow.html</a>
+    for the training pipeline this console drives.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

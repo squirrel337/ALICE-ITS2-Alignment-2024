@@ -14,6 +14,8 @@ The format follows
 — one bash-sourced config, one library, one dispatcher, one ROOT window —
 so the two trees are operated the same way.
 
+`docs/run-console.html` is the same material as a page, if that reads better.
+
 ## Quick start
 
 ```sh
@@ -42,7 +44,6 @@ eval `alienv load -w $O2_DIR/sw O2/latest`   # only if this tree needs O2
 | `runctl.sh log [-f]` | Show or follow the run log |
 | `runctl.sh stop` | Send TERM to the running job |
 | `runctl.sh outputs` | List what the job produced |
-| `runctl.sh reduce [OUT]` | Build an explorer payload from the run |
 | `runctl.sh ui` | Open the ROOT window |
 
 Exit status is 0 on success and non-zero when a check fails, so these

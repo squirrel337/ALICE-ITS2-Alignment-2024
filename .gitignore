@@ -73,9 +73,6 @@ MLPTrain*/
 /Residual_Monitor_Epoch_At_*.root
 /MLPTrain_Step900/
 
-# Explorer intermediate payload (regenerable: tools/build_explorer_data.py)
-docs/explorer-data.json
-
 # range-cut diagnostic input (tools/extract_hits.py)
 hits*.txt
 
