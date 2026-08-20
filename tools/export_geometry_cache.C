@@ -1,8 +1,10 @@
 // Export the per-chip geometry that YDetectorGeometry currently obtains from O2,
 // so that training can run with ROOT alone.
 //
-//   root -l -b -q 'tools/make_alignlib.C'            # once
-//   root -l -b -q 'tools/export_geometry_cache.C'    # then this
+//   root -l -b -q 'tools/export_geometry_cache.C'         # with O2 loaded
+//
+//   root -l -b -q 'tools/make_alignlib.C'                 # without O2: dictionary first
+//   root -l -b -q 'tools/export_geometry_cache.C'
 //
 // Runs on plain ROOT. Both inputs are self-describing: o2sim_geometry.root holds a
 // TGeoManager with the ITS alignable entries already registered (UID == ChipID for
@@ -29,7 +31,15 @@
 // A null answer means the headers are absent and the geometry package has to be
 // installed; nothing in this macro can work around that.
 
-#include "AlignLib/AlignLibProjectHeaders.h"
+// NOTE: AlignLib's headers are deliberately NOT included. o2::detectors::AlignParam
+// keeps its fields private, so naming them compiles only against the MakeProject copy
+// and fails the moment O2 is loaded and the real class wins:
+//
+//     error: 'mSymName' is a private member of 'o2::detectors::AlignParam'
+//
+// The fields are therefore read through ROOT reflection, which reports offsets for
+// private members just as it does for public ones. That path works against either
+// dictionary, so the exporter behaves the same with O2 loaded and without it.
 
 // Loaded at parse time, before the TGeo includes below are resolved. On a build with
 // runtime C++ modules this is what makes those headers findable at all, so it is
@@ -49,6 +59,10 @@ R__LOAD_LIBRARY(libGeom)
 #include <TObjArray.h>
 #include <TObjString.h>
 #include <TROOT.h>
+#include <TClass.h>
+#include <TDataMember.h>
+#include <TVirtualCollectionProxy.h>
+#include <string>
 #include <cstdio>
 #include <cmath>
 #include <vector>
@@ -145,13 +159,63 @@ bool ParseSymName(const TString& s, int& layer, int& halfBarrel, int& stave,
    return layer >= 0 && halfBarrel >= 0 && stave >= 0 && chipInModule >= 0;
 }
 
+// --- AlignParam access by reflection ---------------------------------------------
+// Offsets are resolved once from whichever dictionary provided the class.
+struct AlignAccess {
+   TVirtualCollectionProxy* px = nullptr;
+   Long_t oSym = -1, oX = -1, oY = -1, oZ = -1, oPsi = -1, oTheta = -1, oPhi = -1;
+
+   bool init(TClass* vcl)
+   {
+      px = vcl ? vcl->GetCollectionProxy() : nullptr;
+      if (!px) { ::Error("export", "no collection proxy for %s", vcl ? vcl->GetName() : "?"); return false; }
+      TClass* ecl = px->GetValueClass();
+      if (!ecl) { ::Error("export", "collection has no value class"); return false; }
+      if (ecl->GetState() == TClass::kEmulated) {
+         ::Error("export", "%s has no dictionary. Load O2, or build one with "
+                 "tools/make_alignlib.C", ecl->GetName());
+         return false;
+      }
+      struct { const char* n; Long_t* o; } want[] = {
+         {"mSymName", &oSym}, {"mX", &oX}, {"mY", &oY}, {"mZ", &oZ},
+         {"mPsi", &oPsi}, {"mTheta", &oTheta}, {"mPhi", &oPhi}, {nullptr, nullptr}
+      };
+      for (int i = 0; want[i].n; ++i) {
+         TDataMember* dm = ecl->GetDataMember(want[i].n);
+         if (!dm) { ::Error("export", "%s has no member %s", ecl->GetName(), want[i].n); return false; }
+         *want[i].o = (Long_t)dm->GetOffset();
+      }
+      return true;
+   }
+   const std::string& sym(char* e) const { return *(std::string*)(e + oSym); }
+   double x(char* e) const     { return *(double*)(e + oX); }
+   double y(char* e) const     { return *(double*)(e + oY); }
+   double z(char* e) const     { return *(double*)(e + oZ); }
+   double psi(char* e) const   { return *(double*)(e + oPsi); }
+   double theta(char* e) const { return *(double*)(e + oTheta); }
+   double phi(char* e) const   { return *(double*)(e + oPhi); }
+};
+
 } // namespace
 
 void export_geometry_cache(const char* geomFile  = "o2sim_geometry.root",
                            const char* alignFile = "ITSAlignment.root",
                            const char* outFile   = "geometry/its2_geom.root")
 {
-   gSystem->Load("tools/AlignLib/AlignLib.so");
+   // A dictionary for AlignParam has to come from somewhere: O2 brings its own, and
+   // tools/make_alignlib.C builds one from the file's StreamerInfo when O2 is absent.
+   // Loading AlignLib on top of O2's would be a duplicate definition, so only load it
+   // when nothing else has supplied the class.
+   {
+      TClass* have = TClass::GetClass("o2::detectors::AlignParam");
+      if (!have || have->GetState() == TClass::kEmulated) {
+         if (gSystem->Load("tools/AlignLib/AlignLib.so") < 0)
+            ::Warning("export", "could not load tools/AlignLib/AlignLib.so; "
+                      "run tools/make_alignlib.C first, or load O2");
+      } else {
+         printf("[align] using the AlignParam dictionary already loaded\n");
+      }
+   }
 
    // ---- 1. geometry -------------------------------------------------------
    TFile* fg = TFile::Open(geomFile);
@@ -162,31 +226,39 @@ void export_geometry_cache(const char* geomFile  = "o2sim_geometry.root",
 
    // ---- 2. alignment ------------------------------------------------------
    TFile* fa = TFile::Open(alignFile);
+   if (!fa || fa->IsZombie()) { ::Error("export", "cannot open %s", alignFile); return; }
    TKey* key = fa->GetKey("ccdb_object");
-   auto* ap = (std::vector<o2::detectors::AlignParam>*)
-              key->ReadObjectAny(TClass::GetClass("vector<o2::detectors::AlignParam>"));
-   if (!ap) { ::Error("export", "cannot read AlignParam vector from %s", alignFile); return; }
-   printf("[align] %s : %zu AlignParam entries\n", alignFile, ap->size());
+   if (!key) { ::Error("export", "no key ccdb_object in %s", alignFile); return; }
+
+   TClass* vcl = TClass::GetClass(key->GetClassName());
+   AlignAccess acc;
+   if (!acc.init(vcl)) return;
+   void* apv = key->ReadObjectAny(vcl);
+   if (!apv) { ::Error("export", "cannot read AlignParam vector from %s", alignFile); return; }
+
+   TVirtualCollectionProxy::TPushPop guard(acc.px, apv);
+   const UInt_t nAlign = acc.px->Size();
+   printf("[align] %s : %u AlignParam entries\n", alignFile, nAlign);
 
    // ---- 3. apply the deltas, parents before children ----------------------
    // Ordering by symname depth puts a stave delta before its chips'.
-   std::vector<std::pair<int, size_t>> order;
-   order.reserve(ap->size());
-   for (size_t i = 0; i < ap->size(); ++i)
-      order.emplace_back(TString((*ap)[i].mSymName.c_str()).CountChar('/'), i);
+   std::vector<std::pair<int, UInt_t>> order;
+   order.reserve(nAlign);
+   for (UInt_t i = 0; i < nAlign; ++i)
+      order.emplace_back(TString(acc.sym((char*)acc.px->At(i)).c_str()).CountChar('/'), i);
    std::sort(order.begin(), order.end());
 
    int nApplied = 0, nMissing = 0;
    for (auto& pr : order) {
-      const auto& a = (*ap)[pr.second];
-      TGeoPNEntry* e = g->GetAlignableEntry(a.mSymName.c_str());
+      char* a = (char*)acc.px->At(pr.second);
+      TGeoPNEntry* e = g->GetAlignableEntry(acc.sym(a).c_str());
       if (!e) { ++nMissing; continue; }
       TGeoPhysicalNode* pn = g->MakeAlignablePN(e);
       if (!pn) { ++nMissing; continue; }
 
       // newGlobal = delta * origGlobal ; newLocal = motherGlobal^-1 * newGlobal
       double dR[9], dT[3];
-      DeltaRT(a.mX, a.mY, a.mZ, a.mPsi, a.mTheta, a.mPhi, dR, dT);
+      DeltaRT(acc.x(a), acc.y(a), acc.z(a), acc.psi(a), acc.theta(a), acc.phi(a), dR, dT);
 
       const Double_t* oR = pn->GetMatrix()->GetRotationMatrix();
       const Double_t* oT = pn->GetMatrix()->GetTranslation();

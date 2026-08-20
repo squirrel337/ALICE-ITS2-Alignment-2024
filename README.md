@@ -44,9 +44,18 @@ comparison has not been done yet; see the limitations below.
 To use the cache backend, build the cache once from the two committed inputs:
 
 ```sh
-root -l -b -q tools/make_alignlib.C           # once, rebuilds AlignParam from the file's own StreamerInfo
+# with O2 loaded, this is all you need -- O2 supplies the AlignParam dictionary
 root -l -b -q tools/export_geometry_cache.C   # writes geometry/its2_geom.root
+
+# without O2, build a dictionary first from the alignment file's own StreamerInfo
+root -l -b -q tools/make_alignlib.C
+root -l -b -q tools/export_geometry_cache.C
 ```
+
+The exporter reads `AlignParam` through ROOT reflection rather than by naming its
+fields, because the real O<sup>2</sup> class keeps them private while the
+MakeProject-built one makes them public. Reflection reports offsets for both, so the
+same macro works either way and produces a byte-identical cache.
 
 `export_geometry_cache.C` is the only macro here that uses TGeo, so it needs ROOT's
 geometry component. Where ROOT is packaged in pieces — EPEL splits it into `root-core`,
