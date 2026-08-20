@@ -218,10 +218,21 @@ void YDetectorGeometry::G2L(int chipID, const double glo[3], double loc[3]) cons
 
 void YDetectorGeometry::DetectorToLocal(float row, float col, double loc[3])
 {
-   loc[0] = 0.5 * (ActiveMatrixSizeRows - PassiveEdgeTop + PassiveEdgeReadOut)
-          - (double(row) + 0.5) * PitchRow;
-   loc[1] = 0.0;
-   loc[2] = (double(col) + 0.5) * PitchCol - 0.5 * ActiveMatrixSizeCols;
+   // SegmentationAlpide::detectorToLocalUnchecked, INCLUDING its arithmetic type.
+   // O2 fills a Point3D<float>, so the local coordinate is rounded to float before it
+   // ever reaches the transform. Computing this in double instead is more accurate and
+   // therefore wrong here: it makes the two backends disagree by ~0.05 um at the
+   // sensor, which is a large fraction of a residual. Match O2, do not improve on it.
+   const float firstRow =
+      (float)(0.5 * ((ActiveMatrixSizeRows - PassiveEdgeTop + PassiveEdgeReadOut) - PitchRow));
+   const float firstCol = (float)(0.5 * (PitchCol - ActiveMatrixSizeCols));
+
+   const float xRow = firstRow - row * PitchRow;
+   const float zCol = col * PitchCol + firstCol;
+
+   loc[0] = xRow;
+   loc[1] = 0.0f;
+   loc[2] = zCol;
 }
 
 #endif // !YGEOM_USE_O2
@@ -261,10 +272,11 @@ TVector3 YDetectorGeometry::GToS(int chipID, double gx, double gy, double gz)
    float l2= loc.Y(); //s3
    float l3= loc.Z(); //zcol s2
 #else
-   const double glo[3] = {gx, gy, gz};
+   // O2 builds a Point3D<float> from the arguments, so the GLOBAL point is rounded to
+   // float before the inverse transform, not only afterwards. Narrow here too.
+   const double glo[3] = {(double)(float)gx, (double)(float)gy, (double)(float)gz};
    double locd[3];
    G2L(chipID, glo, locd);
-   // narrowed to float at the same point the O2 path does, via Point3D<float>
    float l1= (float)locd[0]; //xrow s1
    float l2= (float)locd[1]; //s3
    float l3= (float)locd[2]; //zcol s2
