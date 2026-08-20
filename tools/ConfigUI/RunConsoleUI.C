@@ -164,7 +164,10 @@ TGTextEntry *AlignRunConsoleUI::MakeRow(TGCompositeFrame *p, const char *label, 
    row->AddFrame(l, new TGLayoutHints(kLHintsCenterY, 4, 6, 3, 3));
 
    TGTextEntry *entry = new TGTextEntry(row, "");
-   row->AddFrame(entry, new TGLayoutHints(kLHintsExpandX | kLHintsCenterY, 0, 4, 3, 3));
+   // Rows without a Browse button reserve its width on the right, so every entry in a
+   // tab ends at the same place instead of the browseless ones running long.
+   const Int_t rpad = (slot && slot[0]) ? 4 : 94;
+   row->AddFrame(entry, new TGLayoutHints(kLHintsExpandX | kLHintsCenterY, 0, rpad, 3, 3));
 
    if (slot && slot[0]) {
       TGTextButton *browse = new TGTextButton(row, " Browse... ");
@@ -501,10 +504,10 @@ void AlignRunConsoleUI::UpdateSummary()
 
    fRunState->SetText(TString("job directory  ") + Get("RC_JOB_DIR"));
 
-   fJobSummary->GetParent()->Layout();
-   fStepInfo->GetParent()->Layout();
-   fEtaLabel->GetParent()->Layout();
-   fRunState->GetParent()->Layout();
+   // TGWindow -- what GetParent() returns -- has no Layout(); it is TGCompositeFrame
+   // that does. Relayout from the main frame instead, which recurses into the tabs and
+   // picks up all four labels in one call.
+   Layout();
 }
 
 // ------------------------------------------------------------------ slots ---
