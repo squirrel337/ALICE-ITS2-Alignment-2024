@@ -12,6 +12,10 @@
 //
 //  The two files must be the SAME geometry and the SAME starting alignment. Comparing
 //  caches built from different inputs measures the inputs, not the code.
+//
+//  What a real match looks like, measured against an O2 dump on 24120 chips: rotation
+//  bit-identical, worst displacement 6.3e-7 um. Anything at the micron level is a bug,
+//  not rounding.
 // ==========================================================================
 
 #include <TFile.h>
@@ -58,7 +62,7 @@ void compare_geometry_cache(const char* refFile = "geometry/its2_geom_o2.root",
    const int nL = 7;
    double maxT[nL] = {0}, sumT[nL] = {0}, maxR[nL] = {0};
    long   nChip[nL] = {0}, badAddr[nL] = {0};
-   long   firstBad = -1;
+   Long64_t firstBad = -1;
    int    badField = -1;
 
    const Long64_t N = ta->GetEntries();

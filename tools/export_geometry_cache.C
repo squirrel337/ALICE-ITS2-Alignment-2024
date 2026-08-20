@@ -54,6 +54,8 @@ R__LOAD_LIBRARY(libGeom)
 #include <TGeoManager.h>
 #include <TGeoPhysicalNode.h>
 #include <TGeoMatrix.h>
+#include <TGeoVolume.h>
+#include <TGeoNode.h>
 #include <TSystem.h>
 #include <TString.h>
 #include <TObjArray.h>
@@ -71,6 +73,11 @@ R__LOAD_LIBRARY(libGeom)
 namespace {
 
 constexpr int kNChips = 24120;
+
+// o2::itsmft::SegmentationAlpide, in cm. Their difference is the bias
+// GeometryTGeo::extractMatrixSensor corrects for.
+constexpr double kSensorLayerThickness    = 30.e-4;
+constexpr double kSensorLayerThicknessEff = 28.e-4;
 constexpr int kNLayer = 7;
 const int kChipBoundary[kNLayer + 1] = {0, 108, 252, 432, 3120, 6480, 14712, 24120};
 const int kNStaves[kNLayer]     = {12, 16, 20, 24, 30, 42, 48};
@@ -320,9 +327,26 @@ void export_geometry_cache(const char* geomFile  = "o2sim_geometry.root",
          ++nBad; continue;
       }
       TGeoPhysicalNode* pn = g->MakeAlignablePN(e);
-      const TGeoHMatrix* m = pn->GetMatrix();
-      const Double_t* r  = m->GetRotationMatrix();
-      const Double_t* tr = m->GetTranslation();
+
+      // The alignable entry stops at the CHIP volume, but getMatrixL2G returns the
+      // SENSOR's transform -- GeometryTGeo::extractMatrixSensor navigates one level
+      // further, to ITSUSensor<lay>_1, and then shifts by half the difference between
+      // the physical and effective sensitive thickness. Both matter: the sensor sits
+      // at local y = -5 um inside an IB chip and +20 um inside an OB one, and the
+      // shift adds +1 um, which is exactly the -4 um / +21 um this used to be out by.
+      TGeoHMatrix mSens = *pn->GetMatrix();          // chip -> global
+      TGeoVolume* chipVol = pn->GetVolume();
+      TGeoNode* sensNode = chipVol ? chipVol->FindNode(Form("ITSUSensor%d_1", layer)) : nullptr;
+      if (!sensNode) { ++nBad; continue; }
+      mSens.Multiply(sensNode->GetMatrix());         // -> sensor volume
+
+      // o2::its::GeometryTGeo::extractMatrixSensor: matTmp *= TGeoTranslation(0, 0.5*delta, 0)
+      const double delta = kSensorLayerThickness - kSensorLayerThicknessEff;
+      TGeoTranslation tra(0., 0.5 * delta, 0.);
+      mSens.Multiply(&tra);
+
+      const Double_t* r  = mSens.GetRotationMatrix();
+      const Double_t* tr = mSens.GetTranslation();
       for (int k = 0; k < 9; ++k) R[k] = r[k];
       for (int k = 0; k < 3; ++k) T[k] = tr[k];
 

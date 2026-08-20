@@ -141,13 +141,20 @@ by physics.
 > here:** this tree is legacy, and patching it would invalidate every run already recorded
 > against it.
 
-**The geometry cache has not been compared against O<sup>2</sup> end to end.** Its
-rotation convention *is* now correct — `DeltaRT()` in `tools/export_geometry_cache.C` is
-O2's `AlignParam::anglesToMatrix` copied verbatim, checked identical at tag
-`nightly-20230501`. It was previously reconstructed from the StreamerInfo comments and
-agreed with O2 in only two of nine matrix elements, which displaced sensors by up to
-31 µm. Run `tools/dump_o2_geometry.C` under O2 and diff with
-`tools/compare_geometry_cache.C` to confirm nothing else remains.
+**The geometry cache now matches O<sup>2</sup> exactly, but only at the geometry
+level.** Dumped from `o2::its::GeometryTGeo` with `tools/dump_o2_geometry.C` and diffed
+with `tools/compare_geometry_cache.C` over all 24,120 chips: rotation matrices
+**bit-identical**, worst displacement **6.3×10⁻⁷ µm**, addressing identical. That settles
+transform and addressing equivalence, which had never been checked.
+
+Two bugs were found by that comparison and are fixed: the delta rotation was
+reconstructed rather than copied and agreed with O2 in only two of nine elements, and the
+exporter stopped at the chip volume where `getMatrixL2G` returns the sensor's, leaving a
+constant −4 µm (IB) / +21 µm (OB) offset along the sensor normal.
+
+What is still unverified is **physics equivalence** — that a full training run gives the
+same cost and the same residuals under both backends. Run one configuration under each
+`GEOM_BACKEND` and compare; that is what the option exists for.
 
 **`Angle2Alpha` and `kB2C` are reconstructed.** `Ymlp/inc/YO2Compat.h` stands in for a
 handful of O<sup>2</sup> header-only helpers, and these two were rebuilt from the
