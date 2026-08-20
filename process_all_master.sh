@@ -6,19 +6,19 @@ stepF=$3
 
 homedir=$PWD
 
-# Only the YGEOM_USE_O2 build needs O2 at runtime. The default build reads the
-# geometry from the exported per-chip cache (see Ymlp/src/YDetectorGeometry.cxx),
-# so the campaign runs on ROOT alone and this load is skipped.
+# O2 is loaded by default, because the default geometry backend reads through
+# o2::its::GeometryTGeo. Set YGEOM_CACHE=1 for the cache backend, which needs no O2
+# -- the mode for machines where O2 cannot be installed. O2DIR overrides the
+# installation path, which used to be hardcoded to one machine.
 o2dir=${O2DIR:-/home/alice/Software/v20230501}
 
 echo "homedir : ${homedir}"
 
-if [ -n "${YGEOM_USE_O2}" ]; then
-  echo "o2dir   : ${o2dir}"
-  echo "YGEOM_USE_O2 set -- loading O2"
-  eval `alienv load -w ${o2dir}/sw O2/latest`
+if [ -n "${YGEOM_CACHE:-}" ]; then
+  echo "YGEOM_CACHE set -- cache-backed geometry, O2 not loaded"
 else
-  echo "cache-backed geometry -- O2 not required"
+  echo "o2dir   : ${o2dir}"
+  eval `alienv load -w ${o2dir}/sw O2/latest`
 fi
 
 ./process_all_train.sh ${Tag} ${stepI} ${stepF}

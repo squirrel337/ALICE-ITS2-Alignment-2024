@@ -20,29 +20,44 @@ weights), from which **6 rigid-body degrees of freedom** are derived: three rota
 
 ---
 
-## It runs on ROOT alone
+## Two geometry backends
 
-This module used to require a full O<sup>2</sup> environment *at runtime*, not just to
-build: `batch_train` loads `YDetectorGeometry.cxx` through cling, so O<sup>2</sup>
-headers and libraries had to resolve while the job ran.
+The module reads the detector geometry through `YDetectorGeometry`, which has two
+interchangeable backends behind one unchanged public interface. Which one a job is built
+with is a compile guard, `YGEOM_USE_O2`, so **both modes are the same tree built two
+ways** — set it in the run console rather than by editing anything.
 
-That is no longer true. The entire O<sup>2</sup> surface turned out to be about 3.2 MB
-of static per-chip data — transforms and addressing — which is now exported once into a
-cache file. `YDetectorGeometry` has two interchangeable backends behind one unchanged
-public interface:
+| `GEOM_BACKEND` | Reads geometry via | Needs O<sup>2</sup> at run time |
+|---|---|---|
+| **`o2`** *(default)* | `o2::its::GeometryTGeo`, as the module always has | yes — load it with `alienv` first |
+| `cache` | a per-chip file built once by `tools/export_geometry_cache.C` | no |
 
-| Backend | When |
-|---|---|
-| geometry cache *(default)* | ROOT only; no O<sup>2</sup>, no CVMFS, no `alienv` |
-| `YGEOM_USE_O2` | the original path, kept as the reference the cache is validated against |
+`o2` is the default and the reference. `cache` exists for machines where O<sup>2</sup>
+cannot be installed: the entire O<sup>2</sup> runtime surface turned out to be about
+3.2 MB of static per-chip data — transforms and addressing — which the exporter writes
+out once.
 
-Every `o2::` reference in the tree is inside that guard or a comment. Build the cache
-once from the two committed inputs:
+Because the two differ only by that guard, running one configuration under each and
+comparing the outputs is how the cache gets checked against O<sup>2</sup>. That
+comparison has not been done yet; see the limitations below.
+
+To use the cache backend, build the cache once from the two committed inputs:
 
 ```sh
 root -l -b -q tools/make_alignlib.C           # once, rebuilds AlignParam from the file's own StreamerInfo
 root -l -b -q tools/export_geometry_cache.C   # writes geometry/its2_geom.root
 ```
+
+`export_geometry_cache.C` is the only macro here that uses TGeo, so it needs ROOT's
+geometry component. Where ROOT is packaged in pieces — EPEL splits it into `root-core`,
+`root-tree`, `root-geom` and so on — the core headers resolve and `TGeoManager.h` does
+not. Check with:
+
+```sh
+root -l -b -q -e 'gSystem->Load("libGeom"); printf("%s\n", gSystem->Which(TROOT::GetIncludeDir(), "TGeoManager.h"))'
+```
+
+A null answer means the geometry package is missing and has to be installed.
 
 ---
 
@@ -53,7 +68,7 @@ from a ROOT window — the window shells out to the same script, so anything it 
 works over ssh with no display.
 
 ```sh
-eval `alienv load -w $O2_DIR/sw O2/latest`   # only if this tree needs O2
+eval `alienv load -w $O2_DIR/sw O2/latest`   # default backend is o2, so load it
 
 ./config/runctl.sh ui         # set everything in one window
 ./config/runctl.sh doctor     # check this machine has what the run needs
@@ -77,6 +92,7 @@ Full reference: **[`config/README.md`](config/README.md)** and
 | `nTrackMax` | 8 | `Ymlp/inc/DetectorConstant.h` |
 | `DET_MAG` | −0.5 T | `Ymlp/inc/DetectorConstant.h` |
 | `FITMODEL` | 2 (circle) | `Ymlp/inc/DetectorConstant.h` |
+| `GEOM_BACKEND` | `o2` | `config/runconsole.conf` |
 
 ---
 

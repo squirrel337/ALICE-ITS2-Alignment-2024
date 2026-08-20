@@ -166,6 +166,11 @@ footer.page a { color: var(--accent); }
     <code>#define</code>s, launching and tailing — is what shell is for.
   </p>
   <p>
+    Note this is about the <em>console</em>, not the module. The module's own requirements
+    depend on the geometry backend, and by default it still reads through O<sup>2</sup> —
+    see section 05.
+  </p>
+  <p>
     The layout follows
     <span class="mono">ALICE-ITS2-ML-Alignment-Manager</span>, so both trees are operated the
     same way: one bash-sourced configuration, one library, one dispatcher, one ROOT window.
@@ -246,7 +251,7 @@ footer.page a { color: var(--accent); }
     <thead><tr><th>Tab</th><th>Settings</th></tr></thead>
     <tbody>
       <tr><td class="val">Inputs</td><td class="mono">DATA_FILE, DATA_TREE, GEOM_FILE, ALIGN_FILE, PARAMS_ARCHIVE</td></tr>
-      <tr><td class="val">Module</td><td class="mono">MODULE_DIR, FIRST_STEP, N_STEPS</td></tr>
+      <tr><td class="val">Module</td><td class="mono">MODULE_DIR, FIRST_STEP, N_STEPS, GEOM_BACKEND</td></tr>
       <tr><td class="val">Job</td><td class="mono">JOB_NDATA, JOB_NEPOCH, JOB_NCORE, JOB_JPARALLEL, JOB_NTRACKMAX, JOB_DET_MAG, JOB_FITMODEL, JOB_VERTEXFIT, JOB_LEARNING_METHOD</td></tr>
       <tr><td class="val">Learning</td><td class="mono">JOB_ETA_CONSTANT, JOB_ETA_SCALE, JOB_ETA_DETRES, JOB_VALID_WINDOW</td></tr>
       <tr><td class="val">Selection</td><td class="mono">JOB_PT_MIN, JOB_PT_MAX, JOB_CHI_IB, JOB_CHI_OB, JOB_CHI_IB_TRAIN, JOB_CHI_OB_TRAIN, JOB_TRACK_REJECT, JOB_IP_RANGE_R, JOB_IP_RANGE_Z, JOB_MIN_CLUSTER</td></tr>
@@ -286,7 +291,44 @@ footer.page a { color: var(--accent); }
 </section>
 
 <section>
-  <h2><span class="n">05</span>Steps</h2>
+  <h2><span class="n">05</span>Geometry backend</h2>
+  <p>
+    <code>GEOM_BACKEND</code> picks how the job reads the detector geometry.
+  </p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Value</th><th>Reads geometry via</th><th>O<sup>2</sup> at run time</th></tr></thead>
+    <tbody>
+      <tr><td class="val">o2 <em>(default)</em></td><td><code>o2::its::GeometryTGeo</code>, as the module always has</td><td>yes</td></tr>
+      <tr><td class="val">cache</td><td>a per-chip file built once by <code>tools/export_geometry_cache.C</code></td><td>no</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>
+    It is a compile guard, <code>YGEOM_USE_O2</code>, written into the job's own copy of
+    <code>Ymlp/inc/YDetectorGeometry.h</code> at compose time — so the two modes are one
+    tree built two ways, and the module checkout is still only ever read. Composing again
+    switches cleanly in either direction.
+  </p>
+  <p>
+    <code>o2</code> is the default and the reference. <code>cache</code> exists for
+    machines where O<sup>2</sup> cannot be installed. <code>doctor</code> checks what the
+    selected mode actually needs: <code>O2_ROOT</code> for <code>o2</code>, the cache file
+    for <code>cache</code>.
+  </p>
+  <div class="note">
+    <span class="lbl">This is also how the cache gets validated</span>
+    <p>
+      Because the two differ only by that guard, running one configuration under each and
+      comparing the outputs is a direct O<sup>2</sup>-versus-cache check on identical
+      inputs. That comparison has not been run yet — the cache's alignment-delta
+      convention remains unvalidated, and this is the way to settle it.
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">06</span>Steps</h2>
   <p>
     <code>FIRST_STEP</code> and <code>N_STEPS</code> set a range. Step <em>N</em> reads
     <code>MLPTrain_Step&lt;N-1&gt;/</code> and writes <code>MLPTrain_Step&lt;N&gt;/</code>, so
@@ -304,7 +346,7 @@ footer.page a { color: var(--accent); }
 </section>
 
 <section>
-  <h2><span class="n">06</span>The learning rate</h2>
+  <h2><span class="n">07</span>The learning rate</h2>
   <p>
     eta is not a <code>#define</code>. <code>YMultiLayerPerceptron.cxx</code> computes it in the
     constructor from three plain file-scope globals:
@@ -347,7 +389,7 @@ fEta = UpdateConstant * UpdateScale * pow(DETRES*1e-4, 2);   // = 5e-11</code></
 </section>
 
 <section>
-  <h2><span class="n">07</span>Selection</h2>
+  <h2><span class="n">08</span>Selection</h2>
   <p>
     Two pairs of chi thresholds, deliberately different. <code>JOB_CHI_IB</code> /
     <code>JOB_CHI_OB</code> decide which hits spoil the <strong>cost</strong>;
@@ -377,7 +419,7 @@ fEta = UpdateConstant * UpdateScale * pow(DETRES*1e-4, 2);   // = 5e-11</code></
 </section>
 
 <section>
-  <h2><span class="n">08</span>What doctor checks</h2>
+  <h2><span class="n">09</span>What doctor checks</h2>
   <p>These are the things that cost time to discover late:</p>
   <ul>
     <li>the input tree exists and holds at least <code>JOB_NDATA</code> entries</li>
@@ -400,7 +442,7 @@ fEta = UpdateConstant * UpdateScale * pow(DETRES*1e-4, 2);   // = 5e-11</code></
 </section>
 
 <section>
-  <h2><span class="n">09</span>Driving another module version</h2>
+  <h2><span class="n">10</span>Driving another module version</h2>
   <p>
     Set <code>MODULE_DIR</code> to any alignment checkout. The console reads that tree's own
     <code>YMLPParallel.h</code>, <code>DetectorConstant.h</code> and

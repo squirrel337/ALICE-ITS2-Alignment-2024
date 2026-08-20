@@ -19,7 +19,7 @@ so the two trees are operated the same way.
 ## Quick start
 
 ```sh
-eval `alienv load -w $O2_DIR/sw O2/latest`   # only if this tree needs O2
+eval `alienv load -w $O2_DIR/sw O2/latest`   # default backend is o2, so load it
 
 ./config/runctl.sh ui         # set everything in one window
 ./config/runctl.sh doctor     # check this machine has what the run needs
@@ -61,6 +61,27 @@ launches anything itself. Every button shells out to `runctl.sh`, so the
 file format, the validation rules and the job layout live in one place and
 the GUI cannot drift away from the command line. Whatever the window can
 do, you can do over ssh with no display.
+
+## Geometry backend
+
+`GEOM_BACKEND` picks how the job reads the detector geometry:
+
+- **`o2`** (default) — through `o2::its::GeometryTGeo`, as the module always has. O2 must
+  be loaded before the run; `doctor` checks `O2_ROOT` and says so if it is not.
+- **`cache`** — from a per-chip file built once by `tools/export_geometry_cache.C`. No O2
+  at run time. For machines where O2 cannot be installed.
+
+It is a compile guard (`YGEOM_USE_O2`) written into the job's own copy of
+`Ymlp/inc/YDetectorGeometry.h` at compose time, so the two modes are one tree built two
+ways and the module checkout is still only ever read. Composing again switches cleanly
+in either direction.
+
+To compare the two, run one configuration under each and diff the outputs:
+
+```sh
+./config/runctl.sh set GEOM_BACKEND=o2    JOB_TAG=cmp-o2    && ./config/runctl.sh compose && ./config/runctl.sh run
+./config/runctl.sh set GEOM_BACKEND=cache JOB_TAG=cmp-cache && ./config/runctl.sh compose && ./config/runctl.sh run
+```
 
 ## Steps
 

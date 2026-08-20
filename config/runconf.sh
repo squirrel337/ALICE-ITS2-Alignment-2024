@@ -20,6 +20,7 @@ PARAMS_ARCHIVE:path:inputs
 MODULE_DIR:dir:module
 FIRST_STEP:int:module
 N_STEPS:int:module
+GEOM_BACKEND:name:module
 JOB_NDATA:int:size
 JOB_NEPOCH:int:size
 JOB_NCORE:int:size
@@ -65,6 +66,11 @@ RC_DETCONST="Ymlp/inc/DetectorConstant.h"
 RC_MLPSRC="Ymlp/src/YMultiLayerPerceptron.cxx"
 # The learning method and the source tree name are arguments in the driver.
 RC_DRIVER="run_train_circle.C"
+# Backend selection is a compile guard in the module's own header, so the two modes
+# are one tree built two ways -- which is what makes an O2-vs-cache comparison mean
+# anything. compose writes the guard into the job's copy.
+RC_GEOMHDR="Ymlp/inc/YDetectorGeometry.h"
+RC_GEOM_MARK="// --- run console: geometry backend ---"
 
 # The learning methods YMultiLayerPerceptron.h:505 declares.
 RC_METHODS="kStochastic kBatch kBatchDetectorUnitUser kSteepestDescent kRibierePolak kFletcherReeves kBFGS kOffsetTuneByMean"
@@ -235,6 +241,14 @@ rc_validate() {
   [ "$FIRST_STEP" -ge 1 ] || { echo "  FIRST_STEP must be at least 1; at step 0 LoadUpdateSensorList gets an empty name" >&2; bad=1; }
   [ "$N_STEPS" -ge 1 ]    || { echo "  N_STEPS must be at least 1" >&2; bad=1; }
 
+  case "$GEOM_BACKEND" in
+    o2) ;;
+    cache)
+      [ "$RC_CACHE_CAPABLE" -eq 1 ] || {
+        echo "  GEOM_BACKEND is cache, but $RC_MODULE has no cache backend; use o2" >&2; bad=1; } ;;
+    *) echo "  GEOM_BACKEND must be o2 or cache, got '$GEOM_BACKEND'" >&2; bad=1 ;;
+  esac
+
   case "$JOB_FITMODEL" in
     1|2) ;;
     *) echo "  JOB_FITMODEL must be 1 (Line) or 2 (Circle), got '$JOB_FITMODEL'" >&2; bad=1 ;;
@@ -347,6 +361,25 @@ rc_patch_mlpsrc() {
   rc_patch_global "$f" ValidWindow    "$JOB_VALID_WINDOW"
 }
 
+# Writes or removes the YGEOM_USE_O2 guard in the job's own header. Idempotent: any
+# marker block a previous compose left is dropped first, so switching modes back and
+# forth does not accumulate defines.
+rc_patch_geom() {   # file
+  local f="$1" tmp
+  [ -f "$f" ] || return 0
+  tmp=$(mktemp "${TMPDIR:-/tmp}/runconf.XXXXXX") || return 1
+  awk -v want="$GEOM_BACKEND" -v mark="$RC_GEOM_MARK" '
+    $0 == mark { drop = 1; next }
+    drop == 1  { drop = 0; next }
+    /^#ifdef YGEOM_USE_O2$/ && !done {
+      if (want == "o2") { print mark; print "#define YGEOM_USE_O2 1" }
+      done = 1
+    }
+    { print }
+  ' "$f" > "$tmp" && cat "$tmp" > "$f"
+  rm -f "$tmp"
+}
+
 # The driver names the learning method and the source tree. Patching it is
 # what makes DATA_TREE mean anything: before this the key was checked by
 # doctor and then ignored, because SetSourceTreeName was hardcoded.
@@ -386,13 +419,27 @@ rc_doctor() {
   echo "module"
   if [ "$RC_MODULE_VALID" -eq 1 ]; then _rc_ok "checkout at $RC_MODULE"
   else _rc_bad "$RC_MODULE does not look like an alignment checkout"; fi
-  if [ "$RC_O2_REQUIRED" -eq 1 ]; then
-    _rc_warn "this tree needs O2 at runtime; it cannot run where O2 is absent"
-  elif [ "$RC_CACHE_CAPABLE" -eq 1 ]; then
-    _rc_ok "cache-backed geometry -- O2 not required"
+  if [ "$RC_O2_REQUIRED" -eq 1 ] && [ "$GEOM_BACKEND" != o2 ]; then
+    _rc_bad "this tree only has the O2 backend; set GEOM_BACKEND=o2"
   fi
-  if [ "$RC_CACHE_CAPABLE" -eq 1 ] && [ ! -f "$RC_MODULE/geometry/its2_geom.root" ]; then
-    _rc_bad "no geometry/its2_geom.root -- build it with tools/export_geometry_cache.C"
+
+  if [ "$GEOM_BACKEND" = o2 ]; then
+    # alienv exports O2_ROOT. Without it the job compiles against headers that are
+    # not there, twenty minutes after launch rather than now.
+    if [ -n "${O2_ROOT:-}" ]; then
+      _rc_ok "backend o2 -- O2 loaded from ${O2_ROOT}"
+    elif command -v alienv >/dev/null 2>&1; then
+      _rc_warn "backend o2 -- alienv is present but O2 is not loaded in this shell; run: eval \`alienv load -w \$O2_DIR/sw O2/latest\`"
+    else
+      _rc_bad "backend o2 -- no O2 in this environment (O2_ROOT unset, no alienv). Load O2, or set GEOM_BACKEND=cache"
+    fi
+  else
+    _rc_ok "backend cache -- no O2 needed at run time"
+    if [ ! -f "$RC_MODULE/geometry/its2_geom.root" ]; then
+      _rc_bad "no geometry/its2_geom.root -- build it with tools/export_geometry_cache.C (needs ROOT's geometry component)"
+    else
+      _rc_ok "geometry cache present"
+    fi
   fi
 
   echo "inputs"
@@ -475,7 +522,7 @@ rc_print() {
   printf '  %-24s %s\n' "eta (start)"      "$RC_ETA"
   printf '  %-24s %s\n' "module"           "$RC_MODULE"
   printf '  %-24s %s\n' "geometry backend" \
-    "$( [ "$RC_O2_REQUIRED" -eq 1 ] && echo 'O2 required' || echo 'cache-backed (no O2)' )"
+    "$GEOM_BACKEND$( [ "$RC_CACHE_CAPABLE" -eq 1 ] && echo '  (tree supports both)' || echo '  (tree is O2-only)' )"
   printf '  %-24s %s\n' "job directory"    "$RC_JOB_DIR"
   printf '  %-24s %s\n' "seed unpacks to"  "MLPTrain_Step${RC_SEED_STEP}/"
   printf '  %-24s %s\n' "ndf per event"    "$(( 12 * JOB_NTRACKMAX + 1 ))"
@@ -599,6 +646,13 @@ rc_compose() {
 
   rc_patch_driver "$RC_JOB_DIR/$RC_DRIVER"
   _m "run_train_circle.C  method=$JOB_LEARNING_METHOD tree=$DATA_TREE"
+
+  rc_patch_geom "$RC_JOB_DIR/$RC_GEOMHDR"
+  if [ "$GEOM_BACKEND" = o2 ]; then
+    _m "YDetectorGeometry.h  backend=o2 (YGEOM_USE_O2 defined; O2 must be loaded to run)"
+  else
+    _m "YDetectorGeometry.h  backend=cache (no O2 needed; reads geometry/its2_geom.root)"
+  fi
 
   rc_gen_runner
   _m "run_steps.sh  steps $FIRST_STEP..$RC_LAST_STEP ($N_STEPS)"

@@ -12,8 +12,29 @@
 // WHAT STILL NEEDS O2 TO CONFIRM: the alignment-delta convention in DeltaMatrix()
 // below. Everything else is either read verbatim from the files or is plain TGeo
 // navigation. See tools/validate_geometry_cache.C.
+//
+// REQUIRES ROOT'S GEOMETRY COMPONENT. This is the only macro in the tree that uses
+// TGeo; the module itself never does, because the cache exists precisely so that
+// training reads transforms from a file instead of navigating a TGeoManager. On an
+// installation that packages geometry separately -- EPEL splits ROOT into root-core,
+// root-tree, root-geom and so on -- the core headers resolve and the TGeo ones do not,
+// which shows up as
+//
+//     fatal error: 'TGeoManager.h' file not found
+//
+// followed by a wall of "unknown type name 'TGeoManager'". Check with
+//
+//     root -l -b -q -e 'gSystem->Load("libGeom"); printf("%s\n", gSystem->Which(TROOT::GetIncludeDir(), "TGeoManager.h"))'
+//
+// A null answer means the headers are absent and the geometry package has to be
+// installed; nothing in this macro can work around that.
 
 #include "AlignLib/AlignLibProjectHeaders.h"
+
+// Loaded at parse time, before the TGeo includes below are resolved. On a build with
+// runtime C++ modules this is what makes those headers findable at all, so it is
+// load-bearing rather than tidiness.
+R__LOAD_LIBRARY(libGeom)
 
 #include <TFile.h>
 #include <TKey.h>

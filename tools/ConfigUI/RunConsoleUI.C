@@ -47,6 +47,7 @@ private:
    // Module
    TGTextEntry   *fModuleDir;
    TGNumberEntry *fFirstStep, *fNSteps;
+   TGComboBox    *fGeomBackend;
    TGLabel       *fModuleInfo, *fStepInfo;
    // Job: size and model
    TGNumberEntry *fNData, *fNEpoch, *fNCore, *fJPar, *fNTrackMax, *fDetMag;
@@ -338,6 +339,7 @@ void AlignRunConsoleUI::BuildModule(TGCompositeFrame *tab)
    fModuleDir = MakeRow(tab, "Module checkout", "OnBrowseModule()");
    fFirstStep = AddInt(tab, "First step", 1, 100000);
    fNSteps    = AddInt(tab, "Number of steps", 1, 1000);
+   fGeomBackend = AddCombo(tab, "Geometry backend", "o2 cache");
 
    fStepInfo   = new TGLabel(tab, "");
    tab->AddFrame(fStepInfo, new TGLayoutHints(kLHintsLeft, 168, 4, 14, 2));
@@ -348,6 +350,11 @@ void AlignRunConsoleUI::BuildModule(TGCompositeFrame *tab)
    Note(tab, "checkout, say -- and the console reads that tree's own headers instead of assuming these.", 0);
    Note(tab, "First step must be at least 1: at step 0 the module hands LoadUpdateSensorList an empty name.", 8);
    Note(tab, "Steps run back to back in one detached job. If a step fails the run stops there.", 8);
+   Note(tab, "Backend o2 reads the geometry through o2::its::GeometryTGeo and needs O2 loaded --", 10);
+   Note(tab, "this is the default and the reference. Backend cache reads a per-chip file built once", 0);
+   Note(tab, "by tools/export_geometry_cache.C and needs no O2, for machines that cannot install it.", 0);
+   Note(tab, "It is a compile guard, so both are the same tree built two ways: running one config", 8);
+   Note(tab, "under each and comparing the outputs is how the cache gets checked against O2.", 0);
 }
 
 void AlignRunConsoleUI::BuildJob(TGCompositeFrame *tab)
@@ -440,6 +447,7 @@ void AlignRunConsoleUI::LoadAll()
    fModuleDir->SetText(Get("MODULE_DIR"));
    fFirstStep->SetIntNumber(Get("FIRST_STEP").Atoll());
    fNSteps   ->SetIntNumber(Get("N_STEPS").Atoll());
+   SelectByName(fGeomBackend, Get("GEOM_BACKEND"));
 
    fNData    ->SetIntNumber(Get("JOB_NDATA").Atoll());
    fNEpoch   ->SetIntNumber(Get("JOB_NEPOCH").Atoll());
@@ -494,8 +502,9 @@ void AlignRunConsoleUI::UpdateSummary()
       Get("FIRST_STEP").Data(), Get("RC_LAST_STEP").Data(), Get("RC_SEED_STEP").Data()));
 
    fModuleInfo->SetText(TString::Format(
-      "%s        module holds nDATA=%s nEPOCH=%s nTrackMax=%s DET_MAG=%s",
-      (o2 == "1") ? "needs O2 at runtime" : "cache-backed geometry, no O2 needed",
+      "backend %s (%s)        module holds nDATA=%s nEPOCH=%s nTrackMax=%s DET_MAG=%s",
+      Get("GEOM_BACKEND").Data(),
+      (o2 == "1") ? "tree is O2-only" : "tree supports both",
       Get("RC_MOD_NDATA").Data(), Get("RC_MOD_NEPOCH").Data(),
       Get("RC_MOD_NTRACKMAX").Data(), Get("RC_MOD_DET_MAG").Data()));
 
@@ -577,6 +586,7 @@ void AlignRunConsoleUI::OnSave()
    args += " MODULE_DIR="     + Quote(fModuleDir->GetText());
    args += TString::Format(" FIRST_STEP=%lld",    (Long64_t)fFirstStep->GetIntNumber());
    args += TString::Format(" N_STEPS=%lld",       (Long64_t)fNSteps->GetIntNumber());
+   args += " GEOM_BACKEND=" + Quote(SelectedName(fGeomBackend));
    args += TString::Format(" JOB_NDATA=%lld",     (Long64_t)fNData->GetIntNumber());
    args += TString::Format(" JOB_NEPOCH=%lld",    (Long64_t)fNEpoch->GetIntNumber());
    args += TString::Format(" JOB_NCORE=%lld",     (Long64_t)fNCore->GetIntNumber());
