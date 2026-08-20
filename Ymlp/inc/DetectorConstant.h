@@ -31,7 +31,11 @@
 
 #define SIGMA_MEAS	1
 
-#define DET_MAG 	0.5 //T
+#define DET_MAG 	-0.5 //T  signed: negative solenoid polarity for this run.
+// The sign is used, not just the magnitude. It sets track_charge and is passed to
+// YImpactParameter::getImpactParams as det_mag_in_kG = 10*DET_MAG. GetSigma squares
+// the field so it is unaffected, but anything wanting a magnitude must say so --
+// see the std::abs on RecMomentumT.
 
 #define VERTEXFIT	kFALSE //TRUE FALSE
 

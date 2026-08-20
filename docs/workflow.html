@@ -1454,7 +1454,7 @@ a:focus-visible, .rail a:focus-visible {
       <tbody>
         <tr><td class="mono">nLAYER / nSensors</td><td class="val">7 / 24 120</td><td>Detector scope; chip boundaries 0, 108, 252, 432, 3120, 6480, 14712, 24120.</td></tr>
         <tr><td class="mono">FITMODEL</td><td class="val">2</td><td>Circle fit. 1 selects the straight-line model used for field-off data.</td></tr>
-        <tr><td class="mono">DET_MAG</td><td class="val">0.5</td><td>Solenoid field in tesla, used for the pT conversion and the scattering term.</td></tr>
+        <tr><td class="mono">DET_MAG</td><td class="val">-0.5</td><td>Solenoid field in tesla, signed. The sign sets the track charge and is passed on as <code>10*DET_MAG</code> kG; the pT conversion and the scattering term use the magnitude.</td></tr>
         <tr><td class="mono">nTrackMax</td><td class="val">6</td><td>Tracks required per event, and the prong count of the vertex constraint.</td></tr>
         <tr><td class="mono">VERTEXFIT</td><td class="val">kFALSE</td><td>The vertex is not included in the longitudinal <code>z</code>&ndash;<code>&beta;</code> fit.</td></tr>
         <tr><td class="mono">TrackRejection</td><td class="val">110.0</td><td>Maximum <code>&Sigma;&chi;&#178;</code> for a track to enter the cost.</td></tr>

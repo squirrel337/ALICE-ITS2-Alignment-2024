@@ -75,7 +75,7 @@ Full reference: **[`config/README.md`](config/README.md)** and
 | `nDATA` | 4000 | `YMLPParallel.h` |
 | `nEPOCH` | 5 | `YMLPParallel.h` |
 | `nTrackMax` | 8 | `Ymlp/inc/DetectorConstant.h` |
-| `DET_MAG` | 0.5 T | `Ymlp/inc/DetectorConstant.h` |
+| `DET_MAG` | −0.5 T | `Ymlp/inc/DetectorConstant.h` |
 | `FITMODEL` | 2 (circle) | `Ymlp/inc/DetectorConstant.h` |
 
 ---

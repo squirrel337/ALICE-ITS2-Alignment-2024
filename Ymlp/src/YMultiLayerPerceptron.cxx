@@ -4648,12 +4648,12 @@ Double_t YMultiLayerPerceptron::GetCost_Beam_CircleFit(int track) //const
    double py_L0     = pT_L0*std::sin(phi_L0); 
    
    double pxyz[] = {px_L0, py_L0, pz_L0};
-   int track_charge = Fitpar[0]>0 ? -1 : +1;
+   int track_charge = DET_MAG*Fitpar[0]>0 ? -1 : +1;
    YImpactParameter b_IP;
    
    b_IP.TrackParametrization(vxyz, pxyz, track_charge);
    // 1T = 10kG;
-   double det_mag_in_kG = -10*DET_MAG;
+   double det_mag_in_kG = 10*DET_MAG;
    b_IP.getImpactParams(BeamCenter(0), BeamCenter(1), BeamCenter(2),det_mag_in_kG);
    //b_IP.getImpactParams(fvertex_TRKF.X(), fvertex_TRKF.Y(), fvertex_TRKF.Z(),det_mag_in_kG);
    //b_IP.getImpactParams(BeamProfileXZ1*BeamPos[2] + BeamProfileXZ0, BeamProfileYZ1*BeamPos[2] + BeamProfileYZ0, BeamPos[2], det_mag_in_kG);
@@ -5351,12 +5351,12 @@ void YMultiLayerPerceptron::CalculateEventDcdw(int ntracks)
       double py_L0     = pT_L0*std::sin(phi_L0); 
    
       double pxyz[] = {px_L0, py_L0, pz_L0};
-      int track_charge = Fitpar[0]>0 ? -1 : +1;
+      int track_charge = DET_MAG*Fitpar[0]>0 ? -1 : +1;
       YImpactParameter b_IP;
    
       b_IP.TrackParametrization(vxyz, pxyz, track_charge);
       // 1T = 10kG;
-      double det_mag_in_kG = -10*DET_MAG;
+      double det_mag_in_kG = 10*DET_MAG;
       b_IP.getImpactParams(BeamCenter(0), BeamCenter(1), BeamCenter(2),det_mag_in_kG);
       //b_IP.getImpactParams(fvertex_TRKF.X(), fvertex_TRKF.Y(), fvertex_TRKF.Z(),det_mag_in_kG);
       //b_IP.getImpactParams(BeamProfileXZ1*BeamPos[2] + BeamProfileXZ0, BeamProfileYZ1*BeamPos[2] + BeamProfileYZ0, BeamPos[2],det_mag_in_kG);
