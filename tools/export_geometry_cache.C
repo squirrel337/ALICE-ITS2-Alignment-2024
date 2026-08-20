@@ -41,6 +41,8 @@
 // private members just as it does for public ones. That path works against either
 // dictionary, so the exporter behaves the same with O2 loaded and without it.
 
+#include "AlignFingerprint.h"
+
 // Loaded at parse time, before the TGeo includes below are resolved. On a build with
 // runtime C++ modules this is what makes those headers findable at all, so it is
 // load-bearing rather than tidiness.
@@ -297,6 +299,10 @@ void export_geometry_cache(const char* geomFile  = "o2sim_geometry.root",
    }
    printf("[align] applied %d, unmatched %d\n", nApplied, nMissing);
 
+   // Computed here, while no output file is open: AlignFingerprint opens the
+   // alignment file, and that changes gDirectory.
+   const TString alignFP = AlignFingerprintString(alignFile);
+
    // ---- 4. harvest the per-chip cache -------------------------------------
    TString dir = gSystem->DirName(outFile);
    if (dir != "" && dir != ".") gSystem->mkdir(dir, kTRUE);
@@ -364,6 +370,16 @@ void export_geometry_cache(const char* geomFile  = "o2sim_geometry.root",
       t->Fill();
    }
    printf("[cache] filled %lld chips, %d skipped\n", t->GetEntries(), nBad);
+
+   // The alignment is baked in here and never re-read by the cache backend, so the
+   // cache carries a fingerprint of the file it was built from. Recording the name
+   // alone is useless: ITSAlignment.root is the same name in every directory.
+   // Computed above, before the output file existed, because opening the alignment
+   // file moves gDirectory -- writing after it would land nowhere.
+   fo->cd();
+   TNamed afp("alignfingerprint", alignFP.Data());
+   afp.Write();
+   printf("[align] fingerprint %s\n", alignFP.Data());
 
    TNamed prov("provenance",
                Form("geometry=%s;alignment=%s;producer=ROOT-only;root=%s;"

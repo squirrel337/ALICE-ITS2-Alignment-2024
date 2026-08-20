@@ -405,6 +405,21 @@ rc_tree_entries() {   # file tree -> entries, or empty
     sed -n 's/^RC_ENTRIES //p'
 }
 
+# The cache bakes its alignment in and never re-reads it, so a cache built from one
+# ITSAlignment.root and a job pointed at another use different geometry with nothing
+# to say so. These two let doctor compare them.
+rc_cache_alignfp() {  # cachefile -> the fingerprint stamped at export time
+  command -v root >/dev/null 2>&1 || return 1
+  root -l -b -q -e "auto f=TFile::Open(\"$1\"); auto o=(TNamed*)f->Get(\"alignfingerprint\"); printf(\"RC_FP %s\\n\", o?o->GetTitle():\"\")" 2>/dev/null |
+    sed -n 's/^RC_FP //p'
+}
+
+rc_align_fp() {       # alignfile -> the fingerprint of the file itself
+  command -v root >/dev/null 2>&1 || return 1
+  root -l -b -q "$RC_ROOT/tools/align_fingerprint.C(\"$1\")" 2>/dev/null |
+    sed -n 's/^ALIGN_FP //p'
+}
+
 rc_tree_names() {     # file -> tree names on one line
   command -v root >/dev/null 2>&1 || return 1
   root -l -b -q "$RC_ROOT/tools/tree_entries.C(\"$1\",\"\")" 2>/dev/null |
@@ -439,6 +454,26 @@ rc_doctor() {
       _rc_bad "no geometry/its2_geom.root -- build it with tools/export_geometry_cache.C (needs ROOT's geometry component)"
     else
       _rc_ok "geometry cache present"
+      # The cache backend ignores ALIGN_FILE entirely; its alignment was frozen at
+      # export time. If the two disagree the run silently uses a different geometry
+      # from what the same configuration gives under the o2 backend.
+      cfp=$(rc_cache_alignfp "$RC_MODULE/geometry/its2_geom.root")
+      if [ -z "$cfp" ]; then
+        _rc_warn "cache carries no alignment fingerprint -- rebuild it to enable the staleness check"
+      else
+        afile=$(rc_resolve "$ALIGN_FILE" 2>/dev/null)
+        ffp=$(rc_align_fp "$afile")
+        if [ -z "$ffp" ] || [ "$ffp" = unreadable ]; then
+          _rc_warn "cannot fingerprint $ALIGN_FILE; cache staleness unchecked"
+        elif [ "$cfp" = "$ffp" ]; then
+          _rc_ok "cache matches ALIGN_FILE ($cfp)"
+        else
+          _rc_bad "cache was built from a DIFFERENT alignment than ALIGN_FILE"
+          _rc_bad "  cache: $cfp"
+          _rc_bad "  file : $ffp   ($ALIGN_FILE)"
+          _rc_bad "  rebuild: root -l -b -q tools/export_geometry_cache.C"
+        fi
+      fi
     fi
   fi
 

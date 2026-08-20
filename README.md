@@ -41,6 +41,14 @@ Because the two differ only by that guard, running one configuration under each 
 comparing the outputs is how the cache gets checked against O<sup>2</sup>. That
 comparison has not been done yet; see the limitations below.
 
+**The cache freezes the alignment.** `export_geometry_cache.C` applies
+`ITSAlignment.root` and writes the result; the cache backend then never opens that file
+again, while the `o2` backend reads it on every run. A cache built from one alignment and
+a job pointed at another therefore use *different geometry* — which looks exactly like a
+code bug. The cache records a fingerprint of the alignment it was built from, and
+`runctl.sh doctor` refuses to proceed when it does not match `ALIGN_FILE`. **Rebuild the
+cache whenever the alignment changes.**
+
 To use the cache backend, build the cache once from the two committed inputs:
 
 ```sh

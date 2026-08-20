@@ -76,6 +76,12 @@ It is a compile guard (`YGEOM_USE_O2`) written into the job's own copy of
 ways and the module checkout is still only ever read. Composing again switches cleanly
 in either direction.
 
+The cache freezes its alignment at export time and never re-reads `ALIGN_FILE`, so a
+cache built from a different alignment than the job is configured with gives a different
+geometry with nothing to announce it. `doctor` compares a fingerprint of the alignment
+values stored in the cache against the configured file and fails on a mismatch. Rebuild
+the cache whenever the alignment changes.
+
 To compare the two, run one configuration under each and diff the outputs:
 
 ```sh
