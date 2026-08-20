@@ -79,14 +79,18 @@ const int kHicPerStave[kNLayer] = {1, 1, 1, 8, 8, 14, 14};
 const int kChipsPerHic[kNLayer] = {9, 9, 9, 14, 14, 14, 14};
 
 // ---------------------------------------------------------------------------
-// Alignment delta convention. THE ONE THING HERE THAT IS NOT READ FROM A FILE.
+// Alignment delta convention.
 //
 // AlignParam stores a global delta: (mX,mY,mZ) in cm and (mPsi,mTheta,mPhi) in
-// radians, described by the file's own StreamerInfo as "pitch" about the final X
-// axis, "roll" about Y after the first rotation, and "yaw" about Z — an extrinsic
-// Z-Y-X composition, Rz(phi)Ry(theta)Rx(psi).
+// radians. The rotation below is AlignParam::anglesToMatrix copied verbatim from
+// AliceO2, DataFormats/Detectors/Common/src/AlignParam.cxx -- "Euler angles in
+// 'x y z' notation". Checked identical at tag nightly-20230501, the O2 version this
+// module is run against, and on dev.
 //
-// If validation against O2 disagrees, change this function and nothing else.
+// This was previously reconstructed from the StreamerInfo comments as
+// Rz(phi)Ry(theta)Rx(psi), which agreed with O2 in only two of the nine elements and
+// is why the cache backend disagreed with the O2 backend. Do not re-derive it: if it
+// ever needs changing, copy it from O2 again.
 // ---------------------------------------------------------------------------
 // All composition below is done on plain arrays. TGeoHMatrix is registered and
 // managed by the geometry manager, so returning one by value or copying it into a
@@ -97,19 +101,19 @@ const int kChipsPerHic[kNLayer] = {9, 9, 9, 14, 14, 14, 14};
 void DeltaRT(double x, double y, double z, double psi, double theta, double phi,
              double R[9], double T[3])
 {
-   const double cps = std::cos(psi),   sps = std::sin(psi);
-   const double cth = std::cos(theta), sth = std::sin(theta);
-   const double cph = std::cos(phi),   sph = std::sin(phi);
+   const double sinpsi = std::sin(psi),   cospsi = std::cos(psi);
+   const double sinthe = std::sin(theta), costhe = std::cos(theta);
+   const double sinphi = std::sin(phi),   cosphi = std::cos(phi);
 
-   R[0] =  cph * cth;
-   R[1] =  cph * sth * sps - sph * cps;
-   R[2] =  cph * sth * cps + sph * sps;
-   R[3] =  sph * cth;
-   R[4] =  sph * sth * sps + cph * cps;
-   R[5] =  sph * sth * cps - cph * sps;
-   R[6] = -sth;
-   R[7] =  cth * sps;
-   R[8] =  cth * cps;
+   R[0] = costhe * cosphi;
+   R[1] = -costhe * sinphi;
+   R[2] = sinthe;
+   R[3] = sinpsi * sinthe * cosphi + cospsi * sinphi;
+   R[4] = -sinpsi * sinthe * sinphi + cospsi * cosphi;
+   R[5] = -costhe * sinpsi;
+   R[6] = -cospsi * sinthe * cosphi + sinpsi * sinphi;
+   R[7] = cospsi * sinthe * sinphi + sinpsi * cosphi;
+   R[8] = costhe * cospsi;
    T[0] = x; T[1] = y; T[2] = z;
 }
 
@@ -339,7 +343,7 @@ void export_geometry_cache(const char* geomFile  = "o2sim_geometry.root",
 
    TNamed prov("provenance",
                Form("geometry=%s;alignment=%s;producer=ROOT-only;root=%s;"
-                    "delta=Rz(phi)Ry(theta)Rx(psi) global, newGlobal=delta*origGlobal;date=%s",
+                    "delta=O2 AlignParam::anglesToMatrix (nightly-20230501), newGlobal=delta*origGlobal;date=%s",
                     geomFile, alignFile, gROOT->GetVersion(), TDatime().AsSQLString()));
    prov.Write();
    t->Write();
